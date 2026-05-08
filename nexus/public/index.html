@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>NEXUS CONFLICT</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#08080e;height:100vh;overflow:hidden;font-family:Impact,'Arial Narrow',Arial,sans-serif;color:#fff;user-select:none}
+#bg-illustration{position:absolute;inset:0;width:100%;height:100%;z-index:0;filter:saturate(0.6) brightness(0.85);pointer-events:none}
+#bg-smoke{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+#woa{height:100vh;position:relative;overflow:hidden}
+.wos{display:none;position:absolute;inset:0}
+.wos.on{display:flex}
+.wmi{cursor:pointer;margin-bottom:5px}
+.wmi .inn{display:flex;align-items:center;padding:13px 20px 13px 24px;background:rgba(255,255,255,.05);border-left:3px solid #ff5500;transform:skewX(-7deg);letter-spacing:2px;font-size:16px;text-transform:uppercase;transition:background .12s}
+.wmi .inn span{transform:skewX(7deg);display:block}
+.wmi:hover .inn{background:rgba(255,85,0,.22)}
+.wbtn{background:#ff5500;color:#fff;border:none;padding:7px 16px;font-family:Impact,Arial,sans-serif;letter-spacing:1.5px;cursor:pointer;font-size:13px;text-transform:uppercase;clip-path:polygon(7px 0%,100% 0%,calc(100% - 7px) 100%,0% 100%)}
+.wbtn:hover{background:#ff7700}
+.wbtn:disabled{opacity:.35;cursor:not-allowed}
+.wbtno{background:transparent;border:1px solid #ff5500;color:#ff5500;padding:8px 22px;font-family:Impact,Arial,sans-serif;letter-spacing:2px;cursor:pointer;font-size:13px;text-transform:uppercase}
+.wbtno:hover{background:rgba(255,85,0,.15)}
+.wcard{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);padding:10px 14px;cursor:pointer;transition:all .1s;clip-path:polygon(7px 0%,100% 0%,calc(100% - 7px) 100%,0% 100%)}
+.wcard:hover{background:rgba(255,85,0,.12);border-color:rgba(255,85,0,.5)}
+.wcard.on{background:rgba(255,85,0,.22);border-color:#ff5500}
+.wsrow{display:grid;grid-template-columns:2fr 1.4fr 70px 55px 78px;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.05);align-items:center;cursor:pointer;gap:4px}
+.wsrow:hover{background:rgba(255,85,0,.07)}
+.wltab{padding:10px 16px;background:transparent;border:none;border-left:2px solid transparent;color:rgba(255,255,255,.4);font-family:Impact,Arial,sans-serif;letter-spacing:2px;font-size:13px;text-transform:uppercase;cursor:pointer;display:block;text-align:left;transition:all .12s;width:100%}
+.wltab:hover,.wltab.on{color:#ff5500;border-left-color:#ff5500}
+.wstatbar{height:3px;background:#ff5500;margin-top:4px;transition:width .3s}
+.connstat{position:fixed;top:8px;right:14px;font-size:10px;letter-spacing:2px;color:#666;z-index:1000}
+.connstat.on{color:#88ff88}
+input,select{font-family:Impact,Arial,sans-serif}
+</style>
+</head>
+<body>
+
+<div class="connstat" id="connstat">○ OFFLINE</div>
+
+<div id="woa">
+
+<!-- ── Hintergrund: Stadt-Silhouette mit Glow (SVG) ── -->
+<svg id="bg-illustration" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMax slice">
+  <defs>
+    <linearGradient id="bg-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#080812"/>
+      <stop offset="45%"  stop-color="#16081a"/>
+      <stop offset="80%"  stop-color="#28080f"/>
+      <stop offset="100%" stop-color="#100308"/>
+    </linearGradient>
+    <radialGradient id="bg-glow" cx="50%" cy="100%" r="55%">
+      <stop offset="0%"   stop-color="#ff5500" stop-opacity="0.32"/>
+      <stop offset="55%"  stop-color="#ff2200" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#000"    stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bg-sky)"/>
+  <rect width="1920" height="1080" fill="url(#bg-glow)"/>
+  <!-- Ferne Skyline (heller, weiter weg) -->
+  <g fill="#1c1c2c" opacity="0.75">
+    <rect x="0"    y="780" width="100" height="300"/>
+    <rect x="80"   y="760" width="60"  height="320"/>
+    <rect x="180"  y="800" width="80"  height="280"/>
+    <rect x="280"  y="770" width="120" height="310"/>
+    <rect x="420"  y="790" width="60"  height="290"/>
+    <rect x="500"  y="750" width="180" height="330"/>
+    <rect x="700"  y="800" width="80"  height="280"/>
+    <rect x="800"  y="780" width="100" height="300"/>
+    <rect x="920"  y="770" width="120" height="310"/>
+    <rect x="1060" y="790" width="80"  height="290"/>
+    <rect x="1160" y="750" width="180" height="330"/>
+    <rect x="1360" y="780" width="80"  height="300"/>
+    <rect x="1460" y="790" width="100" height="290"/>
+    <rect x="1580" y="770" width="80"  height="310"/>
+    <rect x="1680" y="780" width="240" height="300"/>
+  </g>
+  <!-- Antennen / Funkmasten (zwischen den Reihen) -->
+  <g fill="#000" opacity="0.7">
+    <rect x="725"  y="700" width="2" height="100"/>
+    <rect x="722"  y="750" width="8" height="2"/>
+    <rect x="1175" y="730" width="2" height="80"/>
+    <rect x="1172" y="770" width="8" height="2"/>
+  </g>
+  <!-- Nahe Skyline (dunkler, vor der fernen) -->
+  <g fill="#06060a" opacity="0.96">
+    <rect x="0"    y="850" width="180" height="230"/>
+    <rect x="160"  y="820" width="100" height="260"/>
+    <rect x="240"  y="870" width="120" height="210"/>
+    <rect x="340"  y="830" width="180" height="250"/>
+    <rect x="500"  y="860" width="80"  height="220"/>
+    <rect x="560"  y="800" width="200" height="280"/>
+    <rect x="740"  y="850" width="120" height="230"/>
+    <rect x="840"  y="820" width="180" height="260"/>
+    <rect x="1000" y="870" width="80"  height="210"/>
+    <rect x="1060" y="830" width="200" height="250"/>
+    <rect x="1240" y="850" width="100" height="230"/>
+    <rect x="1320" y="800" width="180" height="280"/>
+    <rect x="1480" y="860" width="120" height="220"/>
+    <rect x="1580" y="830" width="160" height="250"/>
+    <rect x="1720" y="870" width="200" height="210"/>
+  </g>
+  <!-- Beleuchtete Fenster (sparsam, orange) -->
+  <g fill="#ff7733" opacity="0.65">
+    <rect x="200"  y="850" width="6" height="9"/>
+    <rect x="220"  y="870" width="6" height="9"/>
+    <rect x="600"  y="830" width="6" height="9"/>
+    <rect x="640"  y="850" width="6" height="9"/>
+    <rect x="900"  y="850" width="6" height="9"/>
+    <rect x="1130" y="870" width="6" height="9"/>
+    <rect x="1380" y="830" width="6" height="9"/>
+    <rect x="1410" y="850" width="6" height="9"/>
+    <rect x="1620" y="850" width="6" height="9"/>
+    <rect x="1810" y="900" width="6" height="9"/>
+  </g>
+</svg>
+
+<!-- ── Rauch von unten (Canvas) ── -->
+<canvas id="bg-smoke"></canvas>
+
+<svg style="position:absolute;inset:0;width:100%;height:100%;opacity:.07;pointer-events:none" preserveAspectRatio="xMidYMid slice"><defs><pattern id="hx" x="0" y="0" width="60" height="52" patternUnits="userSpaceOnUse"><polygon points="30,2 57,17 57,47 30,62 3,47 3,17" fill="none" stroke="#ff5500" stroke-width="0.7"/></pattern></defs><rect width="100%" height="100%" fill="url(#hx)"/></svg>
+<div style="position:absolute;top:0;left:0;right:0;height:3px;background:#ff5500;z-index:99"></div>
+
+<!-- ── MAIN ─────────────────────────────────────────── -->
+<div id="s-main" class="wos on" style="flex-direction:row">
+  <div style="display:flex;flex-direction:column;justify-content:flex-end;padding:0 0 52px 52px;flex:0 0 340px;z-index:10">
+    <div style="margin-bottom:48px">
+      <div style="font-size:54px;letter-spacing:8px;line-height:1">NEXUS</div>
+      <div style="font-size:17px;letter-spacing:10px;color:#ff5500;margin-top:2px">CONFLICT</div>
+      <div style="width:110px;height:2px;background:#ff5500;margin-top:10px"></div>
+    </div>
+    <div class="wmi" onclick="go('server')"><div class="inn"><span>⬡ &nbsp;SERVER BROWSER</span></div></div>
+    <div class="wmi" onclick="go('findmatch')"><div class="inn"><span>⬡ &nbsp;FIND MATCH</span></div></div>
+    <div class="wmi" onclick="go('loadout')"><div class="inn"><span>⬡ &nbsp;LOADOUTS</span></div></div>
+    <div class="wmi" onclick="go('settings')"><div class="inn"><span>⬡ &nbsp;SETTINGS</span></div></div>
+    <div style="margin-top:28px;font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.25)">V 0.2.0 — ALPHA</div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;padding:48px 44px 52px 0;z-index:5">
+    <div style="text-align:right">
+      <div style="font-size:11px;letter-spacing:3px;color:rgba(255,85,0,.5)">AKTIVE SERVER</div>
+      <div style="font-size:44px;letter-spacing:2px;color:#ff5500" id="m-srvcount">—</div>
+      <div style="font-size:10px;letter-spacing:4px;color:rgba(255,255,255,.25);margin-top:2px">ONLINE</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.25);margin-bottom:8px">SPIELERNAME</div>
+      <input id="playerName" placeholder="OPERATOR" maxlength="16"
+             style="background:rgba(255,255,255,.04);border:1px solid rgba(255,85,0,.3);color:#fff;padding:8px 12px;letter-spacing:2px;font-size:14px;outline:none;text-align:right;width:200px">
+    </div>
+  </div>
+</div>
+
+<!-- ── SERVER BROWSER ───────────────────────────────── -->
+<div id="s-server" class="wos" style="flex-direction:column">
+  <div style="padding:20px 36px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,85,0,.2)">
+    <button class="wbtn" onclick="go('main')">◀ BACK</button>
+    <div style="font-size:20px;letter-spacing:5px;flex:1">SERVER BROWSER</div>
+    <button class="wbtn" style="background:transparent;border:1px solid #ff5500;color:#ff5500" onclick="showCreate()">+ ERSTELLEN</button>
+    <button class="wbtn" style="background:rgba(255,255,255,.07)" onclick="refreshServers()">⟳</button>
+  </div>
+  <div class="wsrow" style="background:rgba(255,85,0,.06);font-size:10px;letter-spacing:2px;color:rgba(255,85,0,.7);cursor:default">
+    <div>SERVER NAME</div><div>MAP / MODE</div><div>SPIELER</div><div>PING</div><div></div>
+  </div>
+  <div id="srv-list" style="overflow-y:auto;flex:1"></div>
+
+  <!-- Create Modal -->
+  <div id="create-modal" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.87);z-index:50;align-items:center;justify-content:center">
+    <div style="background:#0f0f1a;border:1px solid #ff5500;padding:32px;width:380px">
+      <div style="font-size:19px;letter-spacing:4px;margin-bottom:22px;color:#ff5500">SERVER ERSTELLEN</div>
+      <div style="font-size:11px;letter-spacing:2px;color:rgba(255,85,0,.6);margin-bottom:6px">SERVER NAME</div>
+      <input id="sname" placeholder="Mein Server" maxlength="32" style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,85,0,.3);color:#fff;padding:9px 12px;letter-spacing:1px;font-size:14px;margin-bottom:14px;outline:none">
+      <div style="display:flex;gap:10px;margin-bottom:14px">
+        <div style="flex:1">
+          <div style="font-size:11px;letter-spacing:2px;color:rgba(255,85,0,.6);margin-bottom:6px">MAP</div>
+          <select id="smap" style="width:100%;background:#0f0f1a;border:1px solid rgba(255,85,0,.3);color:#fff;padding:9px 12px;letter-spacing:1px;font-size:14px">
+            <option value="district">DISTRICT</option><option value="cargo">CARGO</option><option value="deadlock">DEADLOCK</option><option value="amongusskeld">AMONGUS_SKELD</option>
+          </select>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:11px;letter-spacing:2px;color:rgba(255,85,0,.6);margin-bottom:6px">MODE</div>
+          <select id="smode" style="width:100%;background:#0f0f1a;border:1px solid rgba(255,85,0,.3);color:#fff;padding:9px 12px;letter-spacing:1px;font-size:14px">
+            <option value="tdm">TEAM DEATHMATCH</option><option value="ffa">FREE FOR ALL</option><option value="domination">DOMINATION</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="wbtn" style="flex:1;padding:12px;letter-spacing:2px" onclick="doCreate()">ERSTELLEN</button>
+        <button class="wbtno" style="flex:1;padding:12px" onclick="hideCreate()">ABBRECHEN</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── LOADOUT ──────────────────────────────────────── -->
+<div id="s-loadout" class="wos" style="flex-direction:column">
+  <div style="padding:20px 36px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,85,0,.2)">
+    <button class="wbtn" onclick="saveLoadouts();go('main')">◀ BACK</button>
+    <div style="font-size:20px;letter-spacing:5px;flex:1">LOADOUT EDITOR</div>
+    <div style="display:flex;gap:6px" id="cls-tabs">
+      <div id="cls-0" class="wcard on" onclick="selCls(0)" style="padding:6px 14px;font-size:12px;letter-spacing:1px">KLASSE 1</div>
+      <div id="cls-1" class="wcard"    onclick="selCls(1)" style="padding:6px 14px;font-size:12px;letter-spacing:1px">KLASSE 2</div>
+      <div id="cls-2" class="wcard"    onclick="selCls(2)" style="padding:6px 14px;font-size:12px;letter-spacing:1px">KLASSE 3</div>
+    </div>
+    <div style="font-size:11px;letter-spacing:2px;color:rgba(255,85,0,.7);margin-left:14px" id="lo-equipped">— · —</div>
+  </div>
+  <div style="display:flex;flex:1;min-height:0">
+    <div style="flex:0 0 175px;border-right:1px solid rgba(255,255,255,.06);padding:12px 0;overflow-y:auto">
+      <div style="font-size:10px;letter-spacing:3px;color:#ff5500;padding:0 14px 8px">PRIMÄR</div>
+      <button id="cat-ar"     class="wltab on" onclick="selCat('ar')">STURMGEWEHRE</button>
+      <button id="cat-smg"    class="wltab"   onclick="selCat('smg')">MASCHINENPISTOLEN</button>
+      <button id="cat-sniper" class="wltab"   onclick="selCat('sniper')">SNIPER</button>
+      <div style="font-size:10px;letter-spacing:3px;color:#ff5500;padding:14px 14px 8px;border-top:1px solid rgba(255,255,255,.06);margin-top:8px">SEKUNDÄR</div>
+      <button id="cat-pistol" class="wltab" onclick="selCat('pistol')">PISTOLEN</button>
+      <button id="cat-knife"  class="wltab" onclick="selCat('knife')">MESSER</button>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+      <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;flex:0 0 auto;max-height:50%;overflow-y:auto" id="weapon-grid"></div>
+      <div id="weapon-preview" style="flex:1;border-top:1px solid rgba(255,255,255,.06);min-height:200px;position:relative;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 60%,rgba(255,85,0,.05),transparent 60%)">
+        <canvas id="preview-canvas" style="width:100%;height:100%;display:none"></canvas>
+        <div id="preview-placeholder" style="font-size:14px;letter-spacing:5px;color:rgba(255,85,0,.55);text-align:center">WORK IN PROGRESS</div>
+      </div>
+    </div>
+    <div style="flex:0 0 220px;border-left:1px solid rgba(255,255,255,.06);padding:18px;overflow-y:auto" id="weapon-stats"></div>
+  </div>
+</div>
+
+<!-- ── SETTINGS ─────────────────────────────────────── -->
+<div id="s-settings" class="wos" style="flex-direction:column">
+  <div style="padding:20px 36px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,85,0,.2)">
+    <button class="wbtn" onclick="saveSettings();go('main')">◀ BACK</button>
+    <div style="font-size:20px;letter-spacing:5px">EINSTELLUNGEN</div>
+  </div>
+  <div style="display:flex;flex:1;min-height:0">
+    <div style="flex:0 0 175px;border-right:1px solid rgba(255,255,255,.06);padding:12px 0">
+      <button id="stab-controls" class="wltab on" onclick="setStab('controls')">STEUERUNG</button>
+      <button id="stab-video"    class="wltab"   onclick="setStab('video')">VIDEO</button>
+      <button id="stab-audio"    class="wltab"   onclick="setStab('audio')">AUDIO</button>
+    </div>
+    <div style="flex:1;padding:24px 40px;overflow-y:auto" id="settings-content"></div>
+  </div>
+</div>
+
+<!-- ── FIND MATCH ───────────────────────────────────── -->
+<div id="s-findmatch" class="wos" style="flex-direction:column;align-items:center;justify-content:center">
+  <div style="position:absolute;top:20px;left:36px"><button class="wbtn" onclick="cancelSearch();go('main')">◀ BACK</button></div>
+  <div id="fm-state" style="text-align:center">
+    <div style="font-size:12px;letter-spacing:4px;color:rgba(255,85,0,.6);margin-bottom:10px">SCHNELLES SPIEL</div>
+    <div style="font-size:30px;letter-spacing:6px;margin-bottom:32px">MATCH SUCHEN</div>
+    <div style="display:flex;gap:14px;justify-content:center;margin-bottom:36px">
+      <div id="fm-tdm" class="wcard on" onclick="setMode('tdm')" style="padding:14px 20px;text-align:center;min-width:130px"><div style="font-size:22px">⚔</div><div style="font-size:12px;letter-spacing:2px;margin-top:6px">TEAM DEATH</div></div>
+      <div id="fm-ffa" class="wcard"    onclick="setMode('ffa')" style="padding:14px 20px;text-align:center;min-width:130px"><div style="font-size:22px">◎</div><div style="font-size:12px;letter-spacing:2px;margin-top:6px">FREE FOR ALL</div></div>
+    </div>
+    <button class="wbtn" style="padding:13px 56px;font-size:15px;letter-spacing:3px" onclick="startSearch()">SUCHEN</button>
+  </div>
+  <div id="fm-searching" style="text-align:center;display:none">
+    <div style="font-size:12px;letter-spacing:4px;color:rgba(255,85,0,.6);margin-bottom:20px">VERBINDE...</div>
+    <div id="fm-dots" style="font-size:28px;letter-spacing:8px;color:#ff5500">■ ■ ■</div>
+    <button class="wbtno" style="margin-top:28px;padding:9px 28px" onclick="cancelSearch()">ABBRECHEN</button>
+  </div>
+</div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="js/shared/weapons.js"></script>
+<script src="js/shared/maps.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>// ─── 3D-WAFFENVORSCHAU ──────────────────────────────────────
+const _preview = (() => {
+  const canvas = document.getElementById('preview-canvas');
+  const placeholder = document.getElementById('preview-placeholder');
+  if (!canvas || !window.THREE) return { update() {} };
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(35, 1, 0.05, 50);
+  camera.position.set(0, 0.05, 1.2);
+  camera.lookAt(0, 0, 0);
+
+  // Studio-Licht: warm key + cooler fill + Rim
+  scene.add(new THREE.AmbientLight(0x404050, 0.6));
+  const key = new THREE.DirectionalLight(0xffeecc, 1.2); key.position.set(2, 2, 3); scene.add(key);
+  const fill = new THREE.DirectionalLight(0x4488ff, 0.4); fill.position.set(-2, 1, 2); scene.add(fill);
+  const rim = new THREE.DirectionalLight(0xff5500, 0.7); rim.position.set(0, -1, -3); scene.add(rim);
+
+  let modelRoot = null;       // aktuelles Modell (für späteres Entfernen)
+  let currentLoadId = 0;      // verhindert Race-Conditions wenn man schnell wechselt
+  const loader = new THREE.GLTFLoader();
+
+  function clearModel() {
+    if (modelRoot) { scene.remove(modelRoot); modelRoot = null; }
+  }
+
+  function resize() {
+    const r = canvas.getBoundingClientRect();
+    if (r.width < 10 || r.height < 10) return;
+    renderer.setSize(r.width, r.height, false);
+    camera.aspect = r.width / r.height;
+    camera.updateProjectionMatrix();
+  }
+
+  function update(weapon) {
+    const myId = ++currentLoadId;
+    clearModel();
+    if (!weapon || !weapon.model) {
+      // Kein Modell → Placeholder zeigen, Canvas ausblenden
+      canvas.style.display = 'none';
+      placeholder.style.display = 'block';
+      placeholder.textContent = 'WORK IN PROGRESS';
+      return;
+    }
+    placeholder.style.display = 'none';
+    placeholder.textContent = 'LADE…';
+    canvas.style.display = 'block';
+    resize();
+    loader.load(weapon.model, gltf => {
+      if (myId !== currentLoadId) return;  // schon nächste Waffe gewählt
+      const m = gltf.scene;
+      // Auto-zentrieren und auf einheitliche Größe skalieren
+      const box = new THREE.Box3().setFromObject(m);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      const targetSize = 0.85;
+      const scale = targetSize / Math.max(size.x, size.y, size.z);
+      m.scale.setScalar(scale);
+      m.position.sub(center.multiplyScalar(scale));
+      // Optional: weapon.previewRotation aus weapons.js, falls Default falsch ausgerichtet
+      if (weapon.previewRotation) {
+        m.rotation.set(weapon.previewRotation.x || 0, weapon.previewRotation.y || 0, weapon.previewRotation.z || 0);
+      }
+      scene.add(m);
+      modelRoot = m;
+    }, undefined, () => {
+      if (myId !== currentLoadId) return;
+      canvas.style.display = 'none';
+      placeholder.style.display = 'block';
+      placeholder.textContent = 'MODELL FEHLT';
+    });
+  }
+
+  // Render-Loop: dreht das Modell langsam um Y-Achse
+  (function loop() {
+    requestAnimationFrame(loop);
+    if (modelRoot) modelRoot.rotation.y += 0.008;
+    renderer.render(scene, camera);
+  })();
+  window.addEventListener('resize', resize);
+
+  return { update };
+})();
+// ═══════════════════════════════════════════════════════════
+//  NEXUS CONFLICT — MENÜ-LOGIK
+// ═══════════════════════════════════════════════════════════
+
+const { WEAPONS } = window.NEXUS_WEAPONS;
+const { MAP_CONFIG } = window.NEXUS_MAPS;
+
+// ─── PERSISTENZ (localStorage) ──────────────────────────────
+const STORAGE = {
+  load(key, def) { try { return JSON.parse(localStorage.getItem('nexus.' + key)) ?? def; } catch { return def; } },
+  save(key, val) { localStorage.setItem('nexus.' + key, JSON.stringify(val)); },
+};
+// 3 Klassen-Loadouts. Migration vom alten Einzel-Loadout (Backward-Compat).
+const _legacy = STORAGE.load('loadout', null);
+let loadouts = STORAGE.load('loadouts', null);
+if (!Array.isArray(loadouts) || loadouts.length !== 3) {
+  loadouts = [
+    _legacy || { primary: 'kn44',  secondary: 'mr6' },
+    { primary: 'icr1',  secondary: 'rk5' },
+    { primary: 'locus', secondary: 'marshal' },
+  ];
+}
+let currentClass = STORAGE.load('currentClass', 0);
+if (currentClass < 0 || currentClass > 2) currentClass = 0;
+// "loadout" bleibt als Alias für die aktive Klasse — vermeidet, dass anderer Code bricht.
+let loadout = loadouts[currentClass];
+let settings = STORAGE.load('settings', {
+  fov: 90, sensitivity: 50, adsSensitivity: 40, invertY: false, crouchToggle: true,
+  master: 80, music: 40, sfx: 90, voice: true,
+  showFps: true, motionBlur: false, renderScale: 100,
+});
+const playerNameInput = document.getElementById('playerName');
+playerNameInput.value = STORAGE.load('playerName', 'OPERATOR');
+playerNameInput.addEventListener('input', () => STORAGE.save('playerName', playerNameInput.value));
+
+// ─── SOCKET-VERBINDUNG ──────────────────────────────────────
+const socket = io();
+const cs = document.getElementById('connstat');
+
+socket.on('connect',    () => { cs.textContent = '● ONLINE';  cs.classList.add('on'); refreshServers(); });
+socket.on('disconnect', () => { cs.textContent = '○ OFFLINE'; cs.classList.remove('on'); });
+
+let SERVERS = [];
+socket.on('server_list', list => {
+  SERVERS = list;
+  document.getElementById('m-srvcount').textContent = list.length;
+  renderServers();
+});
+socket.on('error_msg', msg => alert('SERVER: ' + msg));
+
+// Hilfs-Funktion: navigiert zum Spiel und übergibt alle nötigen Params.
+// Der eigentliche Join/Create passiert dann im Spiel selbst — so verlieren
+// wir den Raum nicht durch den Navigations-Disconnect.
+function gotoGame(params) {
+  const baseParams = {
+    name:      playerNameInput.value || 'OPERATOR',
+    primary:   loadout.primary,
+    secondary: loadout.secondary,
+  };
+  const url = new URLSearchParams({ ...baseParams, ...params });
+  window.location.href = 'game.html?' + url.toString();
+}
+
+// ─── SCREEN-SWITCHING ───────────────────────────────────────
+function go(s) {
+  document.querySelectorAll('.wos').forEach(x => x.classList.remove('on'));
+  const el = document.getElementById('s-' + s); if (el) el.classList.add('on');
+  if (s === 'server')   refreshServers();
+  if (s === 'loadout')  renderWeapons();
+  if (s === 'settings') renderSettings();
+}
+
+// ─── SERVER BROWSER ─────────────────────────────────────────
+function refreshServers() { socket.emit('get_servers'); }
+
+function renderServers() {
+  const l = document.getElementById('srv-list');
+  if (!SERVERS.length) {
+    l.innerHTML = '<div style="padding:60px 20px;text-align:center;color:rgba(255,255,255,.3);font-size:13px;letter-spacing:3px">KEINE SERVER ONLINE — ERSTELLE DEINEN!</div>';
+    return;
+  }
+  l.innerHTML = SERVERS.map(s => {
+    const full = s.players >= s.maxPlayers;
+    const mapName = (MAP_CONFIG[s.map]?.name) || s.map.toUpperCase();
+    return `<div class="wsrow" onclick="joinSrv('${s.id}')">
+      <div style="font-size:13px;letter-spacing:1px">${escapeHTML(s.name)}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.5);letter-spacing:1px">${mapName} · ${s.mode.toUpperCase()}</div>
+      <div style="font-size:12px;color:${full?'#ff4444':'#88ff88'}">${s.players}/${s.maxPlayers}</div>
+      <div style="font-size:12px;color:${s.ping<30?'#88ff88':s.ping<60?'#ffaa44':'#ff5544'}">${s.ping}ms</div>
+      <button class="wbtn" ${full?'disabled':''} onclick="event.stopPropagation();joinSrv('${s.id}')">${full?'VOLL':'JOIN'}</button>
+    </div>`;
+  }).join('');
+}
+
+function escapeHTML(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+function joinSrv(id) {
+  if (!socket.connected) return alert('Server nicht verbunden!');
+  gotoGame({ action: 'join', room: id });
+}
+
+function showCreate() { document.getElementById('create-modal').style.display = 'flex'; }
+function hideCreate() { document.getElementById('create-modal').style.display = 'none'; }
+function doCreate() {
+  if (!socket.connected) return alert('Server nicht verbunden!');
+  hideCreate();
+  gotoGame({
+    action: 'create',
+    sname:  document.getElementById('sname').value || 'Mein Server',
+    map:    document.getElementById('smap').value,
+    mode:   document.getElementById('smode').value,
+  });
+}
+
+// ─── LOADOUT ────────────────────────────────────────────────
+let curCat = 'ar';
+function selCat(c) {
+  curCat = c;
+  document.querySelectorAll('[id^="cat-"]').forEach(el => el.classList.remove('on'));
+  document.getElementById('cat-' + c)?.classList.add('on');
+  renderWeapons();
+}
+
+function renderWeapons() {
+  const g = document.getElementById('weapon-grid');
+  const ws = WEAPONS[curCat] || [];
+  const equippedId = (curCat === 'pistol' || curCat === 'knife') ? loadout.secondary : loadout.primary;
+  g.innerHTML = ws.map(w => `
+    <div class="wcard ${equippedId === w.id ? 'on' : ''}" onclick="selectWeapon('${w.id}','${curCat}')">
+      <div style="font-size:14px;letter-spacing:2px">${w.name}</div>
+      <div style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-top:3px">${w.desc}</div>
+    </div>`).join('');
+  renderStats(equippedId);
+  updateEquippedLabel();
+  _preview.update(window.NEXUS_WEAPONS.findWeapon(equippedId));  // ← neu
+}
+
+function selectWeapon(id, cat) {
+  if (cat === 'pistol' || cat === 'knife') loadout.secondary = id;
+  else loadout.primary = id;
+  saveLoadouts();
+  renderWeapons();
+  _preview.update(window.NEXUS_WEAPONS.findWeapon(id));   // ← neu
+}
+
+function renderStats(id) {
+  const s = document.getElementById('weapon-stats');
+  const w = (WEAPONS[curCat] || []).find(x => x.id === id);
+  if (!w) { s.innerHTML = '<div style="color:rgba(255,255,255,.25);font-size:11px;letter-spacing:2px;text-align:center;margin-top:40px">WAFFE WÄHLEN</div>'; return; }
+  // Stats normalisieren auf 0-100
+  const norm = { dmg: Math.min(100, w.dmg), rof: Math.min(100, w.rof/10), range: Math.min(100, w.range/2), mob: Math.max(0, 100 - w.recoil*30) };
+  const bar = (v, l) => `<div style="margin-bottom:11px">
+    <div style="display:flex;justify-content:space-between;font-size:10px;letter-spacing:1px;color:rgba(255,255,255,.45);margin-bottom:3px"><span>${l}</span><span>${Math.round(v)}</span></div>
+    <div style="background:rgba(255,255,255,.08);height:3px"><div class="wstatbar" style="width:${v}%"></div></div></div>`;
+  s.innerHTML = `<div style="font-size:16px;letter-spacing:3px;margin-bottom:3px">${w.name}</div>
+    <div style="font-size:10px;color:#ff5500;letter-spacing:2px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid rgba(255,85,0,.2)">${curCat.toUpperCase()} · AUSGERÜSTET</div>
+    ${bar(norm.dmg,'SCHADEN')}${bar(norm.range,'REICHWEITE')}${bar(norm.rof,'FEUERRATE')}${bar(norm.mob,'MOBILITÄT')}
+    <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:10px;letter-spacing:1px">MAGAZIN: ${w.ammo} / RESERVE: ${w.reserve}</div>`;
+}
+
+function updateEquippedLabel() {
+  const p = window.NEXUS_WEAPONS.findWeapon(loadout.primary);
+  const s = window.NEXUS_WEAPONS.findWeapon(loadout.secondary);
+  document.getElementById('lo-equipped').textContent =
+    `KLASSE ${currentClass + 1}: ${p?.name||'—'} · ${s?.name||'—'}`;
+}
+
+function saveLoadouts() {
+  loadouts[currentClass] = loadout;
+  STORAGE.save('loadouts', loadouts);
+  STORAGE.save('currentClass', currentClass);
+}
+
+function selCls(i) {
+  saveLoadouts();              // bisherige Klasse speichern
+  currentClass = i;
+  loadout = loadouts[i];
+  STORAGE.save('currentClass', i);
+  document.querySelectorAll('[id^="cls-"]').forEach((el, j) => el.classList.toggle('on', j === i));
+  renderWeapons();
+}
+
+// ─── SETTINGS ───────────────────────────────────────────────
+let curStab = 'controls';
+const SETTING_DEFS = {
+  controls: [
+    { k:'sensitivity',    l:'MAUS EMPFINDLICHKEIT', t:'r', s:'%', min:1,  max:200 },
+    { k:'adsSensitivity', l:'ADS EMPFINDLICHKEIT',  t:'r', s:'%', min:1,  max:200 },
+    { k:'invertY',        l:'Y INVERTIEREN',        t:'b' },
+    { k:'crouchToggle',   l:'DUCKEN TOGGLE',        t:'b' },
+  ],
+  video: [
+    { k:'fov',         l:'SICHTFELD (FOV)',     t:'r', s:'°', min:60, max:120 },
+    { k:'renderScale', l:'RENDER SCALE',        t:'r', s:'%', min:50, max:100 },
+    { k:'showFps',     l:'FPS ANZEIGEN',        t:'b' },
+    { k:'motionBlur',  l:'BEWEGUNGSUNSCHÄRFE',  t:'b' },
+  ],
+  audio: [
+    { k:'master', l:'MASTER LAUTSTÄRKE', t:'r', s:'%', min:0, max:100 },
+    { k:'music',  l:'MUSIK',             t:'r', s:'%', min:0, max:100 },
+    { k:'sfx',    l:'SOUNDEFFEKTE',      t:'r', s:'%', min:0, max:100 },
+    { k:'voice',  l:'VOICE CHAT',        t:'b' },
+  ],
+};
+function renderSettings() { setStab(curStab); }
+function setStab(t) {
+  curStab = t;
+  document.querySelectorAll('[id^="stab-"]').forEach(el => el.classList.remove('on'));
+  document.getElementById('stab-' + t)?.classList.add('on');
+  const data = SETTING_DEFS[t];
+  const c = document.getElementById('settings-content');
+  c.innerHTML = '<div style="max-width:520px">' + data.map(s => {
+    const v = settings[s.k];
+    if (s.t === 'r') {
+      return `<div style="display:flex;align-items:center;margin-bottom:20px;gap:14px">
+        <div style="font-size:12px;letter-spacing:2px;flex:1;color:rgba(255,255,255,.75)">${s.l}</div>
+        <input type="range" min="${s.min}" max="${s.max}" value="${v}"
+               oninput="settings['${s.k}']=+this.value;this.nextElementSibling.textContent=this.value+'${s.s}';saveSettings()"
+               style="flex:2;accent-color:#ff5500">
+        <span style="font-size:12px;color:#ff5500;min-width:50px;text-align:right">${v}${s.s}</span>
+      </div>`;
+    } else {
+      return `<div style="display:flex;align-items:center;margin-bottom:20px;gap:14px">
+        <div style="font-size:12px;letter-spacing:2px;flex:1;color:rgba(255,255,255,.75)">${s.l}</div>
+        <div onclick="settings['${s.k}']=!settings['${s.k}'];saveSettings();renderSettings()"
+             style="width:46px;height:24px;border-radius:12px;background:${v?'#ff5500':'rgba(255,255,255,.1)'};position:relative;cursor:pointer;border:1px solid rgba(255,255,255,.1)">
+          <div style="position:absolute;width:20px;height:20px;border-radius:50%;background:#fff;top:2px;left:${v?'22px':'2px'};transition:left .15s"></div>
+        </div></div>`;
+    }
+  }).join('') + '</div>';
+}
+function saveSettings() { STORAGE.save('settings', settings); }
+
+// ─── QUICKPLAY ──────────────────────────────────────────────
+let curMode = 'tdm';
+function setMode(m) {
+  curMode = m;
+  ['tdm','ffa'].forEach(id => document.getElementById('fm-' + id)?.classList.toggle('on', id === m));
+}
+function startSearch() {
+  if (!socket.connected) return alert('Nicht mit Server verbunden!');
+  gotoGame({ action: 'quickplay', mode: curMode });
+}
+function cancelSearch() {
+  document.getElementById('fm-state').style.display = 'block';
+  document.getElementById('fm-searching').style.display = 'none';
+}
+
+// ─── INIT ───────────────────────────────────────────────────
+updateEquippedLabel();
+document.querySelectorAll('[id^="cls-"]').forEach((el, j) => el.classList.toggle('on', j === currentClass));
+
+// ─── HINTERGRUND-RAUCH (Canvas-Partikel) ────────────────────
+(function smokeFx() {
+  const cv  = document.getElementById('bg-smoke');
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+
+  function resize() { cv.width = window.innerWidth; cv.height = window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const particles = [];
+  const MAX = 30;
+
+  function spawn(prefill = false) {
+    particles.push({
+      x: Math.random() * cv.width,
+      y: prefill ? cv.height - Math.random() * cv.height * 0.55 : cv.height + 30,
+      vy: -0.22 - Math.random() * 0.4,             // langsam aufsteigend
+      vx: (Math.random() - 0.5) * 0.18,             // leicht driftend
+      size: 90 + Math.random() * 110,
+      life: prefill ? 0.3 + Math.random() * 0.55 : 1,
+      decay: 0.0014 + Math.random() * 0.0018,
+      tinted: Math.random() < 0.4,                  // ~40% mit warmem Orange-Glow
+    });
+  }
+  // Ein paar Partikel vorab spawnen, damit der Effekt nicht "leer" startet
+  for (let i = 0; i < 12; i++) spawn(true);
+
+  let lastSpawn = 0;
+  function frame(t) {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    if (particles.length < MAX && t - lastSpawn > 180) { spawn(); lastSpawn = t; }
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= p.decay;
+      if (p.life <= 0 || p.y < -200) { particles.splice(i, 1); continue; }
+
+      const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+      const base = p.tinted ? 'rgba(255, 100, 50, ' : 'rgba(180, 160, 150, ';
+      grad.addColorStop(0,   base + (p.life * 0.06).toFixed(3) + ')');
+      grad.addColorStop(0.5, base + (p.life * 0.025).toFixed(3) + ')');
+      grad.addColorStop(1,   base + '0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

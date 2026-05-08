@@ -1,0 +1,1597 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>NEXUS CONFLICT — Game</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;font-family:Impact,'Arial Narrow',Arial,sans-serif;color:#fff}
+#canvas-container{position:relative;width:100vw;height:100vh}
+canvas{display:block}
+#hud{position:absolute;inset:0;pointer-events:none}
+#crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:30px;height:30px;transition:transform .12s}
+#crosshair.spread{transform:translate(-50%,-50%) scale(1.5)}
+.ch-line{position:absolute;background:#fff;box-shadow:0 0 3px rgba(0,0,0,.9),0 0 1px rgba(0,0,0,1)}
+.ch-top   {width:2px;height:6px;top:0;left:50%;transform:translateX(-50%)}
+.ch-bottom{width:2px;height:6px;bottom:0;left:50%;transform:translateX(-50%)}
+.ch-left  {width:6px;height:2px;left:0;top:50%;transform:translateY(-50%)}
+.ch-right {width:6px;height:2px;right:0;top:50%;transform:translateY(-50%)}
+.ch-dot   {width:2px;height:2px;background:#fff;border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);box-shadow:0 0 2px rgba(0,0,0,.9)}
+#health-bar{position:absolute;bottom:30px;left:30px}
+#health-label{font-size:10px;letter-spacing:3px;color:rgba(255,85,0,.7);margin-bottom:5px}
+#health-track{position:relative;overflow:hidden;width:200px;height:5px;background:rgba(255,255,255,.08)}
+#health-fill{height:100%;background:#ff5500;width:100%;transition:width .12s ease-out}
+#health-damage-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:#fff;opacity:0;pointer-events:none}
+#ammo{position:absolute;bottom:30px;right:30px;text-align:right}
+#ammo-cur{font-size:42px;letter-spacing:2px;line-height:1}
+#ammo-res{font-size:16px;color:rgba(255,255,255,.4);letter-spacing:2px;margin-top:2px}
+#weapon-name{font-size:11px;letter-spacing:4px;color:#ff5500;margin-bottom:6px}
+#killfeed{position:absolute;top:80px;right:20px;display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+.kf-entry{background:rgba(0,0,0,.5);padding:4px 10px;font-size:12px;letter-spacing:1px;border-right:2px solid #ff5500;animation:fadeOut 6s forwards}
+@keyframes fadeOut{0%,80%{opacity:1}100%{opacity:0}}
+#top-hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:center;padding:14px;gap:40px;background:linear-gradient(to bottom,rgba(0,0,0,.6),transparent)}
+.team-score{text-align:center}
+.ts-name{font-size:10px;letter-spacing:3px;color:rgba(255,255,255,.5)}
+.ts-num{font-size:32px;letter-spacing:2px}
+#match-timer{font-size:20px;letter-spacing:5px;color:#ff5500;align-self:center}
+#match-mode{font-size:10px;letter-spacing:4px;color:rgba(255,85,0,.6);text-align:center;margin-top:2px}
+#map-name{position:absolute;top:80px;left:50%;transform:translateX(-50%);font-size:10px;letter-spacing:6px;color:rgba(255,255,255,.2)}
+#hitmarker{
+  position:fixed;
+  left:50%;
+  top:50%;
+  width:40px;
+  height:40px;
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+  opacity:0;
+  z-index:999;
+}
+
+#hitmarker span{
+  position:absolute;
+  width:10px;
+  height:3px;
+  background:white;
+  border-radius:2px;
+  opacity:0;
+}
+
+/* oben links */
+#hitmarker span:nth-child(1){
+  top:10px;
+  left:6px;
+  transform:rotate(45deg);
+}
+
+/* oben rechts */
+#hitmarker span:nth-child(2){
+  top:10px;
+  right:6px;
+  transform:rotate(-45deg);
+}
+
+/* unten links */
+#hitmarker span:nth-child(3){
+  bottom:10px;
+  left:6px;
+  transform:rotate(-45deg);
+}
+
+/* unten rechts */
+#hitmarker span:nth-child(4){
+  bottom:10px;
+  right:6px;
+  transform:rotate(45deg);
+}
+
+#hitmarker.show{
+  animation:hitmarkerPop .14s ease-out;
+}
+
+#hitmarker.show span{
+  opacity:1;
+}
+
+#hitmarker.kill span{
+  background:red;
+}
+
+@keyframes hitmarkerPop{
+  0%{
+    opacity:0;
+    transform:translate(-50%,-50%) scale(.6);
+  }
+  35%{
+    opacity:1;
+    transform:translate(-50%,-50%) scale(1.15);
+  }
+  100%{
+    opacity:0;
+    transform:translate(-50%,-50%) scale(1);
+  }
+}
+#damage-vignette{position:absolute;inset:0;box-shadow:inset 0 0 100px rgba(255,0,0,.6);opacity:0;transition:opacity .3s;pointer-events:none}
+#damage-vignette.hit{opacity:1}
+#controls-hint{position:absolute;bottom:90px;left:30px;font-size:10px;letter-spacing:2px;color:rgba(255,255,255,.25);line-height:1.8}
+#lock-overlay{position:absolute;inset:0;background:rgba(0,0,0,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;pointer-events:all;cursor:pointer}
+#lock-overlay.hidden{display:none}
+.pause-pane{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
+.cls-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,85,0,.4);padding:18px 22px;cursor:pointer;min-width:170px;text-align:center;transition:all .12s;clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%)}
+.cls-card:hover{background:rgba(255,85,0,.14);border-color:#ff5500}
+.cls-card.active{background:rgba(255,85,0,.28);border-color:#ff5500;box-shadow:inset 0 0 0 1px rgba(255,85,0,.5)}
+.cls-card .cls-num{font-size:11px;letter-spacing:3px;color:rgba(255,85,0,.7);margin-bottom:8px}
+.cls-card .cls-pri{font-size:15px;letter-spacing:2px;color:#fff}
+.cls-card .cls-sec{font-size:11px;letter-spacing:1px;color:rgba(255,255,255,.5);margin-top:3px}
+#lock-title{font-size:36px;letter-spacing:8px}
+#lock-sub{font-size:12px;letter-spacing:5px;color:rgba(255,85,0,.8)}
+#lock-info{font-size:11px;letter-spacing:3px;color:rgba(255,255,255,.4);margin-top:6px}
+.lo-btn{background:#ff5500;color:#fff;border:none;padding:10px 36px;font-family:Impact,Arial,sans-serif;font-size:14px;letter-spacing:3px;text-transform:uppercase;cursor:pointer;clip-path:polygon(7px 0%,100% 0%,calc(100% - 7px) 100%,0% 100%)}
+.lo-btn:hover{background:#ff7700}
+.lo-back{background:transparent;border:1px solid rgba(255,85,0,.5);color:rgba(255,85,0,.8);padding:7px 22px;font-family:Impact,Arial,sans-serif;font-size:12px;letter-spacing:3px;cursor:pointer}
+.lo-back:hover{background:rgba(255,85,0,.1)}
+#death-screen{position:absolute;inset:0;background:rgba(180,0,0,.2);display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+#death-screen.show{display:flex}
+#death-title{font-size:48px;letter-spacing:8px;color:#ff3300}
+#death-sub{font-size:12px;letter-spacing:5px;color:rgba(255,255,255,.5)}
+#respawn-count{font-size:20px;letter-spacing:4px;color:#ff5500}
+#match-end{position:absolute;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;pointer-events:all}
+#match-end.show{display:flex}
+#me-title{font-size:48px;letter-spacing:8px;color:#ff5500}
+#scoreboard{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.7)}
+#scoreboard.show{display:flex}
+#scoreboard table{border-collapse:collapse;font-size:13px;letter-spacing:1px}
+#scoreboard th,#scoreboard td{padding:6px 14px;border-bottom:1px solid rgba(255,85,0,.2)}
+#scoreboard th{color:#ff5500;font-weight:normal;letter-spacing:3px;font-size:11px}
+.player-label{position:absolute;pointer-events:none;transform:translate(-50%,-100%);white-space:nowrap;display:flex;flex-direction:column;align-items:center;gap:2px}
+/* ── ADS (Aim Down Sights) — Rotpunktvisier ── */
+#ads-overlay{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .12s;background:radial-gradient(circle at 50% 50%,transparent 0,transparent 200px,rgba(0,0,0,.55) 400px,rgba(0,0,0,.85) 700px)}
+#ads-overlay.show{opacity:1}
+#ads-dot{position:absolute;top:50%;left:50%;width:5px;height:5px;background:#ff2200;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 10px rgba(255,30,0,.95),0 0 3px #fff;opacity:0;transition:opacity .08s;pointer-events:none;z-index:10}
+#ads-dot.show{opacity:1}
+#crosshair.hidden{opacity:0}
+.pl-name{color:#fff;font-size:11px;letter-spacing:1px;background:rgba(0,0,0,.6);padding:2px 6px}
+.pl-health{position:relative;width:60px;height:5px;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.2);opacity:0;transition:opacity .2s;overflow:hidden}
+.pl-health.show{opacity:1}
+.pl-health-lag{position:absolute;top:0;left:0;height:100%;background:#fff;width:100%;transition:width .45s ease-out .15s}
+.pl-health-fill{position:absolute;top:0;left:0;height:100%;background:#ff3322;width:100%;transition:width .08s ease-out}
+#xp-popup{position:absolute;top:50%;left:50%;transform:translate(20px,-50%);font-size:18px;letter-spacing:3px;color:#ff8800;text-shadow:0 0 6px rgba(0,0,0,.9),0 0 2px #000;opacity:0;pointer-events:none;font-weight:bold}
+#xp-popup.pop{animation:xpPop 1.2s ease-out forwards}
+@keyframes xpPop{
+  0%   {opacity:0;transform:translate(20px,-50%) scale(.6)}
+  15%  {opacity:1;transform:translate(20px,-58%) scale(1.15)}
+  30%  {transform:translate(20px,-62%) scale(1)}
+  100% {opacity:0;transform:translate(20px,-90%) scale(1)}
+}
+</style>
+</head>
+<body>
+<div id="canvas-container">
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="hud">
+    <div id="top-hud">
+      <div class="team-score"><div class="ts-name" id="team-a-name">ALPHA</div><div class="ts-num" id="score-a" style="color:#4488ff">0</div></div>
+      <div style="text-align:center"><div id="match-timer">10:00</div><div id="match-mode">—</div></div>
+      <div class="team-score"><div class="ts-name" id="team-b-name">BRAVO</div><div class="ts-num" id="score-b" style="color:#ff5500">0</div></div>
+    </div>
+    <div id="map-name">—</div>
+
+    <div id="crosshair">
+      <div class="ch-line ch-top"></div>
+      <div class="ch-line ch-bottom"></div>
+      <div class="ch-line ch-left"></div>
+      <div class="ch-line ch-right"></div>
+      <div class="ch-dot"></div>
+    </div>
+    <div id="hitmarker">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    <div id="xp-popup">+100 XP</div>
+
+    <!-- ADS Scope (Rotpunktvisier) -->
+    <div id="ads-overlay"></div>
+    <div id="ads-dot"></div>
+    <div id="damage-vignette"></div>
+
+    <div id="health-bar">
+      <div id="health-label">HEALTH</div>
+      <div id="health-track"><div id="health-fill"></div></div>
+    </div>
+      <div id="health-num">200</div>
+    </div>
+
+    <div id="ammo">
+      <div id="weapon-name">—</div>
+      <div id="ammo-cur">30</div>
+      <div id="ammo-res">/ 90</div>
+    </div>
+
+    <div id="killfeed"></div>
+
+    <div id="controls-hint">
+      WASD — BEWEGEN · MAUS — UMSEHEN<br>
+      KLICK — SCHIESSEN · R — NACHLADEN<br>
+      1/2 — WAFFE WECHSELN<br>
+      SHIFT — SPRINT · C — DUCKEN/SLIDE<br>
+      TAB — SCOREBOARD · ESC — PAUSE
+    </div>
+
+    <div id="death-screen">
+      <div id="death-title">ELIMINATED</div>
+      <div id="death-sub" style="margin-bottom:8px">RESPAWN IN</div>
+      <div id="respawn-count">5</div>
+    </div>
+
+    <div id="scoreboard"><div style="background:#0f0f1a;border:1px solid #ff5500;padding:24px 36px;min-width:520px">
+      <div style="font-size:18px;letter-spacing:5px;color:#ff5500;margin-bottom:18px;text-align:center">SCOREBOARD</div>
+      <table style="width:100%"><thead><tr><th style="text-align:left">SPIELER</th><th>TEAM</th><th>K</th><th>D</th><th>XP</th></tr></thead><tbody id="sb-body"></tbody></table>
+    </div></div>
+
+    <div id="match-end">
+      <div id="me-title">MATCH BEENDET</div>
+      <div style="font-size:14px;letter-spacing:4px;color:rgba(255,255,255,.6)" id="me-winner">—</div>
+      <button class="lo-btn" style="margin-top:20px" onclick="window.location.href='index.html'">ZURÜCK ZUM MENÜ</button>
+    </div>
+  </div>
+
+  <div id="lock-overlay">
+    <!-- ROOT-Bereich: Spielen / Loadouts / Hauptmenü -->
+    <div id="pause-root" class="pause-pane">
+      <div id="lock-title">NEXUS CONFLICT</div>
+      <div id="lock-sub">KLICKEN UM ZU SPIELEN</div>
+      <div id="lock-info" style="text-align:center">— / —<br>VERBINDE...</div>
+      <button class="lo-btn" id="play-btn">SPIELEN</button>
+      <button class="lo-btn" id="loadouts-btn" style="background:transparent;border:1px solid #ff5500;color:#ff5500">LOADOUTS</button>
+      <a href="index.html" style="text-decoration:none"><button class="lo-back">◀ HAUPTMENÜ</button></a>
+    </div>
+
+    <!-- LOADOUTS-Bereich: Klasse 1/2/3 wählen -->
+    <div id="pause-loadouts" class="pause-pane" style="display:none">
+      <div style="font-size:24px;letter-spacing:6px;margin-bottom:6px">LOADOUTS</div>
+      <div style="font-size:11px;letter-spacing:3px;color:rgba(255,85,0,.6);margin-bottom:30px">KLASSE WÄHLEN</div>
+      <div id="pause-classes" style="display:flex;gap:14px;margin-bottom:32px"></div>
+      <div style="font-size:10px;letter-spacing:2px;color:rgba(255,255,255,.35);margin-bottom:24px;text-align:center;max-width:480px">
+        Konfiguration der Klassen erfolgt im Hauptmenü.<br>
+        Klassenwechsel wird beim nächsten Respawn aktiv.
+      </div>
+      <button class="lo-back" id="pause-back-btn">◀ ZURÜCK</button>
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="js/shared/weapons.js"></script>
+<script src="js/shared/maps.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════
+//  NEXUS CONFLICT — FPS ENGINE (Multiplayer)
+// ═══════════════════════════════════════════════════════════
+const { WEAPONS, findWeapon } = window.NEXUS_WEAPONS;
+const { MAP_CONFIG }           = window.NEXUS_MAPS;
+
+// ── URL-Params: Server-Connection-Daten aus dem Menü ──────
+const PARAMS = new URLSearchParams(window.location.search);
+const ACTION     = PARAMS.get('action') || (PARAMS.get('room') ? 'join' : null);
+const ROOM_ID    = PARAMS.get('room');
+const MAP_ID_REQ = PARAMS.get('map') || 'district';   // nur bei action=create
+const MODE_REQ   = PARAMS.get('mode') || 'tdm';
+const SERVER_NAME = PARAMS.get('sname') || 'Mein Server';
+const PLAYER_NAME = PARAMS.get('name') || 'OPERATOR';
+// Alle 3 Loadouts aus localStorage lesen (vom Hauptmenü gespeichert).
+// URL-Params haben Vorrang für die initiale Klasse.
+function _loadAllLoadouts() {
+  try {
+    const arr = JSON.parse(localStorage.getItem('nexus.loadouts'));
+    if (Array.isArray(arr) && arr.length === 3) return arr;
+  } catch {}
+  return [
+    { primary: 'kn44',  secondary: 'mr6' },
+    { primary: 'icr1',  secondary: 'rk5' },
+    { primary: 'locus', secondary: 'marshal' },
+  ];
+}
+const LOADOUTS = _loadAllLoadouts();
+let CURRENT_CLASS = (() => {
+  try { return Math.max(0, Math.min(2, +localStorage.getItem('nexus.currentClass') | 0)); }
+  catch { return 0; }
+})();
+
+// Aktive Klasse: URL überschreibt initial, danach via Pause-Menü änderbar.
+let LOADOUT = {
+  primary:   findWeapon(PARAMS.get('primary'))   || findWeapon(LOADOUTS[CURRENT_CLASS].primary)   || findWeapon('kn44'),
+  secondary: findWeapon(PARAMS.get('secondary')) || findWeapon(LOADOUTS[CURRENT_CLASS].secondary) || findWeapon('mr6'),
+};
+let CURRENT_MAP = MAP_ID_REQ;  // wird nach room_joined aktualisiert
+
+// ── Settings aus localStorage ─────────────────────────────
+const SETTINGS = (() => {
+  try { return JSON.parse(localStorage.getItem('nexus.settings')) ?? {}; } catch { return {}; }
+})();
+
+const CONFIG = {
+  playerHeight: 1.7,
+  playerSpeed:  7,
+  sprintMult:   1.35,
+  gravity:      25,
+  jumpForce:    8,
+  mouseSensitivity: (SETTINGS.sensitivity || 50) * 0.00004,
+  adsSensRatio: ((SETTINGS.adsSensitivity || 40) / Math.max(1, SETTINGS.sensitivity || 50)),
+  fov:          SETTINGS.fov || 90,
+  invertY:      !!SETTINGS.invertY,
+};
+
+// ── State ─────────────────────────────────────────────────
+const MAX_HEALTH = 200;
+const state = {
+  health: MAX_HEALTH, ammo: LOADOUT.primary.ammo, ammoReserve: LOADOUT.primary.reserve,
+  currentWeapon: LOADOUT.primary, currentSlot: 'primary',
+  alive: true, locked: false,
+  keys: {}, velocity: new THREE.Vector3(), onGround: false,
+  hVelocity: new THREE.Vector3(),  // horizontale Velocity für smoothes Movement
+  yaw: 0, pitch: 0, reloading: false,
+  myId: null, myTeam: 'alpha',
+  remotePlayers: new Map(), // socketId -> { mesh, label, headPos, target }
+  scores: { alpha: 0, bravo: 0 },
+  // ─ NEU: Crouch / Slide / XP / Animation ─
+  crouching: false,
+  sliding: false,
+  slideTime: 0,           // verbleibende Slide-Zeit in Sekunden
+  slideDir: new THREE.Vector3(),
+  xp: 0,
+  myKills: 0, myDeaths: 0,
+  pose: 'standing',       // 'standing' | 'crouching' | 'sliding'
+  cameraTargetY: 0,       // Soll-Höhe (für Crouch/Slide-Animation)
+  cameraTilt: 0,          // Roll-Tilt für Slide-Anim
+  ads: false,             // Aim Down Sights aktiv?
+  fovCurrent: 0,          // wird im Setup gesetzt
+  // ─ Recoil ─
+  recoilCount: 0,
+  lastShotTime: 0,
+  // ─ ADS smooth progress (0 = hipfire, 1 = volles ADS) ─
+  adsProgress: 0,
+  // ─ Sprint/Movement-Bob ─
+  bobTime: 0,
+  bobAmount: 0,
+  // ─ Waffenwechsel-Animation ─
+  switchPhase: 'idle',    // 'idle' | 'down' | 'up'
+  switchAnimT: 0,
+  switchTargetSlot: null,
+  // ─ Persistente Munition pro Slot (kein Auto-Reset beim Wechseln) ─
+  ammoStore: null,        // wird beim Spawnen initialisiert
+};
+
+//Healthbar bei HIT animation
+const healthTrack = document.getElementById('health-track');
+
+const damageOverlay = document.createElement('div');
+damageOverlay.id = 'health-damage-overlay';
+
+healthTrack.appendChild(damageOverlay);
+
+
+
+// ── Three.js Setup ────────────────────────────────────────
+const canvas   = document.getElementById('gameCanvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio((SETTINGS.renderScale || 100) / 100);
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(CONFIG.fov, window.innerWidth / window.innerHeight, 0.1, 500);
+camera.position.set(0, CONFIG.playerHeight, 0);
+state.fovCurrent = CONFIG.fov;
+
+// Licht
+scene.add(new THREE.AmbientLight(0x223344, 0.8));
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+dirLight.position.set(20, 40, 10);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.width = 2048;
+dirLight.shadow.mapSize.height = 2048;
+dirLight.shadow.camera.left = -60; dirLight.shadow.camera.right = 60;
+dirLight.shadow.camera.top  = 60;  dirLight.shadow.camera.bottom = -60;
+scene.add(dirLight);
+
+// ── Waffe in der View ─────────────────────────────────────
+const weaponGroup = new THREE.Group();
+camera.add(weaponGroup);
+scene.add(camera);
+
+const weaponLoader = new THREE.GLTFLoader();
+
+function buildWeaponMesh(weapon) {
+  weaponGroup.clear();
+
+  if (weapon.model) {
+    weaponLoader.load(weapon.model, gltf => {
+      const m = gltf.scene;
+      const s = weapon.scale || 1;
+      m.scale.set(s, s, s);
+      if (weapon.offset)   m.position.set(weapon.offset.x, weapon.offset.y, weapon.offset.z);
+      if (weapon.rotation) m.rotation.set(weapon.rotation.x, weapon.rotation.y, weapon.rotation.z);
+      weaponGroup.add(m);
+    });
+    return;
+  }
+
+  // Fallback: Box-Modell (alter Code)
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(0.05, 0.08, 0.4),
+    new THREE.MeshStandardMaterial({ color: weapon.color, roughness: 0.8 }));
+  body.position.set(0.18, -0.14, -0.35);
+  weaponGroup.add(body);
+  // ... (rest wie bisher)
+}
+
+buildWeaponMesh(state.currentWeapon);
+
+// Munition pro Slot persistent halten (sonst füllt sich Mag bei jedem Wechsel)
+state.ammoStore = {
+  primary:   { ammo: LOADOUT.primary.ammo,   reserve: LOADOUT.primary.reserve },
+  secondary: { ammo: LOADOUT.secondary.ammo, reserve: LOADOUT.secondary.reserve },
+};
+
+// ── MAP-BUILDER ───────────────────────────────────────────
+let mapMeshes = [];   // alle kollidierbaren Meshes (für Raycasts)
+function makeMat(color, rough = 0.9, metal = 0) {
+  return new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal });
+}
+function addBox(w, h, d, x, y, z, mat, castShadow = true) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  mesh.position.set(x, y, z);
+  mesh.castShadow = castShadow;
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+  mapMeshes.push(mesh);
+  return mesh;
+}
+
+const MAP_BUILDERS = {
+  district() {
+    addBox(80, 0.2, 80, 0, -0.1, 0, makeMat(0x222233, 0.95), false);
+    const wallMat = makeMat(0x334455, 0.9), concreteMat = makeMat(0x445566, 0.85);
+    addBox(10,12,20,-20,6,0,wallMat); addBox(8,4,20,-14,2,0,concreteMat);
+    addBox(12,16,14,20,8,5,wallMat);
+    addBox(4,2.4,2,0,1.2,-10,makeMat(0x886644,0.8));
+    addBox(4,2.4,2,5,1.2,-10,makeMat(0x446688,0.8));
+    addBox(4,0.8,1,-5,0.4,5,makeMat(0x555555));
+    addBox(4,0.8,1,6,0.4,8,makeMat(0x555555));
+    addBox(8,1.2,8,-5,0.6,-20,makeMat(0x3a3a5a));
+    addBox(3,3,3,-7,2.7,-20,wallMat);
+    addBox(3,3,12,10,1.5,-5,makeMat(0x2a3a4a));
+    addBox(6,1,0.3,0,0.5,15,makeMat(0x888888,0.6,0.3));
+    addBox(6,1,0.3,-12,0.5,15,makeMat(0x888888,0.6,0.3));
+    // Aussenwände
+    addBox(0.5,8,80,40,4,0,wallMat); addBox(0.5,8,80,-40,4,0,wallMat);
+    addBox(80,8,0.5,0,4,40,wallMat); addBox(80,8,0.5,0,4,-40,wallMat);
+    const pl1 = new THREE.PointLight(0xff5500,1.5,20); pl1.position.set(0,4,-10); scene.add(pl1);
+    const pl2 = new THREE.PointLight(0x4488ff,1,18);   pl2.position.set(-20,5,0); scene.add(pl2);
+  },
+  cargo() {
+    addBox(80,0.2,80,0,-0.1,0,makeMat(0x1a1a1a,0.95),false);
+    const colors = [0x884422,0x224488,0x228844,0x666666,0x885522];
+    const positions = [[-12,1.5,-8],[12,1.5,-8],[-12,1.5,8],[12,1.5,8],[0,1.5,-15],[-20,1.5,0],[20,1.5,0],[0,1.5,15]];
+    positions.forEach((p,i) => {
+      addBox(6,3,3,p[0],p[1],p[2],makeMat(colors[i%colors.length],0.85));
+      if (i < 4) addBox(6,3,3,p[0],p[1]+3,p[2],makeMat(colors[(i+2)%colors.length],0.85));
+    });
+    addBox(1,14,1,-22,7,-18,makeMat(0x556677,0.7,0.5));
+    addBox(1,14,1,22,7,-18,makeMat(0x556677,0.7,0.5));
+    addBox(46,1,1,0,14,-18,makeMat(0x556677,0.7,0.5));
+    addBox(8,0.3,12,0,0.15,0,makeMat(0x333333));
+    addBox(0.5,10,80,40,5,0,makeMat(0x223344)); addBox(0.5,10,80,-40,5,0,makeMat(0x223344));
+    addBox(80,10,0.5,0,5,40,makeMat(0x223344));  addBox(80,10,0.5,0,5,-40,makeMat(0x223344));
+    const pl = new THREE.PointLight(0xffaa44,2,30);  pl.position.set(0,10,0); scene.add(pl);
+    const p2 = new THREE.PointLight(0x2244aa,1.2,25);p2.position.set(-22,6,-18); scene.add(p2);
+  },
+  deadlock() {
+    addBox(80,0.2,80,0,-0.1,0,makeMat(0x110022,0.95),false);
+    const labMat = makeMat(0x2a1a3a,0.9), techMat = makeMat(0x3a2a4a,0.75,0.2);
+    addBox(14,4,14,-15,2,-15,labMat); addBox(14,4,14,15,2,-15,labMat); addBox(14,4,14,0,2,10,labMat);
+    addBox(3,4,6,-7,2,-15,techMat);   addBox(3,4,6,7,2,-15,techMat);
+    addBox(1.2,1.4,0.6,-5,0.7,5,makeMat(0x111122,0.8,0.4));
+    addBox(1.2,1.4,0.6,5,0.7,5,makeMat(0x111122,0.8,0.4));
+    addBox(2,0.8,4,0,0.4,-5,makeMat(0x220033,0.7));
+    addBox(2,1.2,2,3,0.6,12,makeMat(0x332244));
+    addBox(1,0.6,3,-3,0.3,16,makeMat(0x332244));
+    addBox(0.5,8,80,40,4,0,labMat);  addBox(0.5,8,80,-40,4,0,labMat);
+    addBox(80,8,0.5,0,4,40,labMat);  addBox(80,8,0.5,0,4,-40,labMat);
+    const pl = new THREE.PointLight(0xaa00ff,2,25);    pl.position.set(0,4,0); scene.add(pl);
+    const p2 = new THREE.PointLight(0xff0055,1.5,20);  p2.position.set(-15,3,-15); scene.add(p2);
+    const p3 = new THREE.PointLight(0x00aaff,1,20);    p3.position.set(15,3,-15); scene.add(p3);
+  },
+};
+
+function loadMap(mapId) {
+  // Alte Map löschen
+  mapMeshes.forEach(m => scene.remove(m));
+  mapMeshes = [];
+  const cfg = MAP_CONFIG[mapId];
+  scene.background = new THREE.Color(cfg.skyColor);
+  scene.fog = new THREE.FogExp2(cfg.fogColor, cfg.fogDensity);
+
+  if (cfg.modelUrl) {
+    // GLTF-Modell laden
+    new THREE.GLTFLoader().load(cfg.modelUrl, gltf => {
+      gltf.scene.traverse(c => {
+        if (c.isMesh) {
+          c.castShadow = c.receiveShadow = true;
+          mapMeshes.push(c);   // ← wichtig, sonst funktioniert Kollision/Hit nicht!
+        }
+      });
+      scene.add(gltf.scene);
+    });
+  } else if (MAP_BUILDERS[mapId]) {
+    MAP_BUILDERS[mapId]();   // Prozedural-Fallback
+  }
+  document.getElementById('map-name').textContent = cfg.name;
+}
+
+// ── REMOTE PLAYERS (andere Spieler) ────────────────────────
+function createRemotePlayer(id, data) {
+  const teamColor = data.team === 'alpha' ? 0x4488ff : data.team === 'bravo' ? 0xff5500 : 0xaaaa44;
+  const group = new THREE.Group();
+
+  // Körper
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(0.6, 1.2, 0.4),
+    new THREE.MeshStandardMaterial({ color: teamColor, roughness: 0.7 }));
+  body.position.y = 0.6;
+  body.castShadow = true;
+  group.add(body);
+
+  // Kopf
+  const head = new THREE.Mesh(
+    new THREE.BoxGeometry(0.35, 0.35, 0.35),
+    new THREE.MeshStandardMaterial({ color: 0xddccaa, roughness: 0.8 }));
+  head.position.y = 1.4;
+  head.castShadow = true;
+  group.add(head);
+  group.userData.head = head;
+  group.userData.body = body;
+
+  // Beine
+  const leg = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.4, 0.4),
+    new THREE.MeshStandardMaterial({ color: 0x222233, roughness: 0.9 }));
+  leg.position.y = -0.2;
+  leg.castShadow = true;
+  group.add(leg);
+
+  scene.add(group);
+
+  // Name-Label + Healthbar im DOM
+  const label = document.createElement('div');
+  label.className = 'player-label';
+  label.innerHTML =
+    `<div class="pl-name" style="color:${data.team === 'alpha' ? '#88aaff' : '#ffaa66'}">${data.name}</div>
+    <div class="pl-health">
+      <div class="pl-health-lag"></div>
+      <div class="pl-health-fill"></div>
+    </div>`;
+
+  state.remotePlayers.set(id, {
+    group, label,
+    nameEl:       label.querySelector('.pl-name'),
+    healthEl:     label.querySelector('.pl-health'),
+    healthFillEl: label.querySelector('.pl-health-fill'),
+    healthLagEl:  label.querySelector('.pl-health-lag'),   // ← neu
+    name: data.name, team: data.team,
+    target: { pos: new THREE.Vector3(), yaw: 0 },
+    health: MAX_HEALTH,                                     // ← MAX_HEALTH statt 100
+    lastHit: 0,
+    pose: 'standing',
+    visible: true,
+  });
+}
+
+function removeRemotePlayer(id) {
+  const rp = state.remotePlayers.get(id);
+  if (!rp) return;
+  scene.remove(rp.group);
+  rp.label.remove();
+  state.remotePlayers.delete(id);
+}
+
+// LOS-Raycaster (wiederverwendet, um nicht jedes Frame neu zu allokieren)
+const _losRay = new THREE.Raycaster();
+const _camPos = new THREE.Vector3();
+const _toTarget = new THREE.Vector3();
+let _losTick = 0;
+
+const NAMETAG_MAX_DIST   = 50;   // weiter weg → unsichtbar
+const HEALTHBAR_DURATION = 2500; // ms Anzeige nach letztem Treffer
+
+// Lerp-Update: Position smooth interpolieren + Sichtlinien-Check + Healthbar
+function updateRemotePlayers(dt) {
+  _losTick++;
+  // LOS-Raycast nur ~8x/Sekunde für jeden Spieler verteilen (Performance)
+  const doLOS = _losTick % 4 === 0;
+
+  camera.getWorldPosition(_camPos);
+
+  state.remotePlayers.forEach(rp => {
+    rp.group.position.lerp(rp.target.pos, Math.min(1, dt * 12));
+    rp.group.rotation.y += (rp.target.yaw - rp.group.rotation.y) * Math.min(1, dt * 10);
+
+    // ── Pose-Animation: body/head je nach pose tiefer ──
+    const targetBodyScale = rp.pose === 'crouching' ? 0.6 : rp.pose === 'sliding' ? 0.5 : 1;
+    const body = rp.group.userData.body, head = rp.group.userData.head;
+    if (body) body.scale.y = body.scale.y + (targetBodyScale - body.scale.y) * Math.min(1, dt * 12);
+    if (head) {
+      const targetHeadY = rp.pose === 'standing' ? 1.4 : rp.pose === 'crouching' ? 0.9 : 0.7;
+      head.position.y = head.position.y + (targetHeadY - head.position.y) * Math.min(1, dt * 12);
+    }
+    // Slide → leicht nach vorn kippen
+    const targetTilt = rp.pose === 'sliding' ? -0.4 : 0;
+    rp.group.rotation.x = rp.group.rotation.x + (targetTilt - rp.group.rotation.x) * Math.min(1, dt * 8);
+
+    // ── Sichtbarkeit: Distanz + Sichtlinie + In-Frustum ──
+    const headWorld = rp.group.position.clone(); headWorld.y += 1.6;
+    const dist = _camPos.distanceTo(headWorld);
+
+    let visible = rp.group.visible && dist < NAMETAG_MAX_DIST;
+    if (visible && doLOS) {
+      // Sichtlinien-Test: Strahl von Kamera zum Kopf, gegen mapMeshes
+      _toTarget.copy(headWorld).sub(_camPos).normalize();
+      _losRay.set(_camPos, _toTarget);
+      _losRay.far = dist - 0.3;  // knapp vor dem Kopf — wenn etwas dazwischen ist, blockiert
+      const blockers = _losRay.intersectObjects(mapMeshes, false);
+      rp.visible = blockers.length === 0;
+    } else if (!doLOS) {
+      // zwischen LOS-Updates: bestehenden Wert behalten
+      visible = visible && rp.visible !== false;
+    }
+    if (doLOS) visible = visible && rp.visible;
+
+    // Bildschirm-Position berechnen
+    const sp = headWorld.project(camera);
+    const onScreen = sp.z < 1 && sp.x > -1.1 && sp.x < 1.1 && sp.y > -1.1 && sp.y < 1.1;
+
+    if (!visible || !onScreen) {
+      rp.label.style.display = 'none';
+    } else {
+      rp.label.style.display = 'flex';
+      rp.label.style.left = ((sp.x + 1) / 2 * window.innerWidth) + 'px';
+      rp.label.style.top  = ((1 - sp.y) / 2 * window.innerHeight) + 'px';
+
+      // Healthbar nur kurz nach Treffer anzeigen
+      const sinceHit = performance.now() - rp.lastHit;
+      if (sinceHit < HEALTHBAR_DURATION) {
+        rp.healthEl.classList.add('show');
+        const hpPct = (Math.max(0, rp.health) / MAX_HEALTH) * 100;
+        rp.healthFillEl.style.width = hpPct + '%';
+        rp.healthLagEl.style.width  = hpPct + '%';   // beide setzen — CSS-Delay erledigt den Rest
+      } else {
+        rp.healthEl.classList.remove('show');
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SOCKET.IO — Networking
+// ═══════════════════════════════════════════════════════════
+const socket = io();
+
+socket.on('connect', () => {
+  document.getElementById('lock-info').textContent = 'VERBUNDEN — TRETE BEI...';
+  const loadoutPayload = { primary: LOADOUT.primary.id, secondary: LOADOUT.secondary.id };
+
+  if (ACTION === 'create') {
+    socket.emit('create_room', {
+      name:       SERVER_NAME,
+      map:        MAP_ID_REQ,
+      mode:       MODE_REQ,
+      playerName: PLAYER_NAME,
+      loadout:    loadoutPayload,
+    });
+  } else if (ACTION === 'join' && ROOM_ID) {
+    socket.emit('join_room', {
+      roomId:     ROOM_ID,
+      playerName: PLAYER_NAME,
+      loadout:    loadoutPayload,
+    });
+  } else if (ACTION === 'quickplay') {
+    socket.emit('quickplay', { mode: MODE_REQ, playerName: PLAYER_NAME, loadout: loadoutPayload });
+  } else {
+    document.getElementById('lock-info').innerHTML = 'KEINE AKTION ANGEGEBEN<br>OFFLINE-MODUS';
+    loadMap(CURRENT_MAP);
+  }
+});
+
+// Quickplay: Server sagt uns, welchem Raum wir beitreten sollen
+socket.on('quickplay_match', ({ roomId }) => {
+  socket.emit('join_room', {
+    roomId, playerName: PLAYER_NAME,
+    loadout: { primary: LOADOUT.primary.id, secondary: LOADOUT.secondary.id },
+  });
+});
+
+socket.on('error_msg', msg => {
+  document.getElementById('lock-info').textContent = 'FEHLER: ' + msg;
+});
+
+socket.on('room_joined', data => {
+  state.myId   = socket.id;
+  state.myTeam = data.playerState.team;
+  state.scores = data.scores;
+  CURRENT_MAP  = data.map;
+  loadMap(data.map);
+  document.getElementById('match-mode').textContent =
+    data.mode === 'tdm' ? 'TEAM DEATHMATCH' :
+    data.mode === 'ffa' ? 'FREE FOR ALL' : 'DOMINATION';
+
+  // FFA: Score-HUD ausblenden
+  if (data.mode === 'ffa') {
+    document.querySelectorAll('.team-score').forEach(el => el.style.opacity = '0.2');
+  }
+
+  // Spawn-Position vom Server übernehmen
+  const sp = data.playerState.pos;
+  camera.position.set(sp.x, sp.y, sp.z);
+
+  document.getElementById('lock-info').textContent =
+    `ROOM ${data.roomId} · ${MAP_CONFIG[data.map].name} · ${data.mode.toUpperCase()}`;
+});
+
+socket.on('snapshot', snapshot => {
+  for (const [id, p] of Object.entries(snapshot)) {
+    if (id === state.myId) {
+      // eigene Daten aus Snapshot übernehmen (für Scoreboard)
+      state.xp = p.xp || 0;
+      state.myKills = p.kills || 0;
+      state.myDeaths = p.deaths || 0;
+      continue;
+    }
+    let rp = state.remotePlayers.get(id);
+    if (!rp) { createRemotePlayer(id, p); rp = state.remotePlayers.get(id); }
+    rp.target.pos.set(p.pos.x, p.pos.y - CONFIG.playerHeight, p.pos.z);
+    rp.target.yaw = p.rot.yaw;
+    rp.group.visible = p.alive;
+    rp.health = p.health;
+    rp.pose = p.pose || 'standing';
+    rp.kills = p.kills || 0;
+    rp.deaths = p.deaths || 0;
+    rp.xp = p.xp || 0;
+    if (!p.alive) rp.label.style.display = 'none';
+  }
+  // Spieler entfernen, die nicht mehr im Snapshot sind
+  state.remotePlayers.forEach((_, id) => {
+    if (!snapshot[id]) removeRemotePlayer(id);
+  });
+});
+
+socket.on('player_joined', ({ id, name, team }) => {
+  createRemotePlayer(id, { name, team });
+  addKillFeed('—', name + ' ist beigetreten', '#88aaff');
+});
+socket.on('player_left',   ({ id }) => removeRemotePlayer(id));
+
+// Server: "Du hast getroffen!" — Hitmarker + Healthbar + ggf. XP
+socket.on('you_hit', ({ targetId, health, killed, xpGain }) => {
+  const rp = state.remotePlayers.get(targetId);
+  if (rp) {
+    rp.lastHit = performance.now();
+    rp.health  = health;
+  }
+  showHitMarker(killed);
+  if (killed && xpGain) showXPGain(xpGain);
+});
+
+socket.on('player_killed', ({ killerName, victimName, weapon, scores, killerId, victimId }) => {
+  state.scores = scores;
+  document.getElementById('score-a').textContent = scores.alpha;
+  document.getElementById('score-b').textContent = scores.bravo;
+  addKillFeed(killerName, victimName, killerId === state.myId ? '#ffaa00' : '#88aaff');
+  if (victimId === state.myId) showDeathScreen();
+});
+
+socket.on('take_damage', ({ health }) => {
+  state.health = health;
+  
+  updateHUD();
+  flashDamage();
+});
+
+socket.on('respawn', ({ pos }) => {
+  state.health = MAX_HEALTH;
+  state.alive  = true;
+  camera.position.set(pos.x, pos.y, pos.z);
+  state.velocity.set(0, 0, 0);
+  document.getElementById('death-screen').classList.remove('show');
+  // Frische Munition für BEIDE Slots
+  state.ammoStore = {
+    primary:   { ammo: LOADOUT.primary.ammo,   reserve: LOADOUT.primary.reserve },
+    secondary: { ammo: LOADOUT.secondary.ammo, reserve: LOADOUT.secondary.reserve },
+  };
+  state.ammo        = state.currentWeapon.ammo;
+  state.ammoReserve = state.currentWeapon.reserve;
+  state.recoilCount = 0;
+  updateHUD();
+});
+
+socket.on('timer', t => {
+  const m = String(Math.floor(t / 60)).padStart(2, '0');
+  const s = String(t % 60).padStart(2, '0');
+  document.getElementById('match-timer').textContent = m + ':' + s;
+});
+
+socket.on('match_end', ({ winner, scores }) => {
+  document.getElementById('me-winner').textContent =
+    winner === 'DRAW' ? 'UNENTSCHIEDEN' : `GEWINNER: ${winner}`;
+  document.getElementById('match-end').classList.add('show');
+  document.exitPointerLock();
+});
+
+socket.on('player_shot', ({ id, weaponId }) => {
+  // Schuss-Effekt für andere Spieler (Sound/Mündungsfeuer)
+  const rp = state.remotePlayers.get(id);
+  if (rp) flashRemoteMuzzle(rp);
+});
+
+function flashRemoteMuzzle(rp) {
+  const flash = new THREE.PointLight(0xffaa00, 3, 4);
+  flash.position.copy(rp.group.position);
+  flash.position.y += 1.4;
+  scene.add(flash);
+  setTimeout(() => scene.remove(flash), 60);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INPUT
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  state.keys[e.code] = true;
+  if (e.code === 'KeyR'   && state.locked && !state.reloading) reload();
+  if (e.code === 'Digit1' && state.locked) switchWeapon('primary');
+  if (e.code === 'Digit2' && state.locked) switchWeapon('secondary');
+  if (e.code === 'Tab'    && state.locked) { e.preventDefault(); document.getElementById('scoreboard').classList.add('show'); updateScoreboard(); }
+  if (e.code === 'KeyC'   && state.locked && state.alive && !e.repeat) handleCrouchSlide();
+  if (e.code === 'Escape') releaseLock();
+});
+document.addEventListener('keyup', e => {
+  state.keys[e.code] = false;
+  if (e.code === 'Tab')   document.getElementById('scoreboard').classList.remove('show');
+});
+
+document.addEventListener('mousemove', e => {
+  if (!state.locked) return;
+  const sensMult = state.ads ? CONFIG.adsSensRatio : 1;
+  state.yaw   -= e.movementX * CONFIG.mouseSensitivity * sensMult;
+  state.pitch -= e.movementY * CONFIG.mouseSensitivity * sensMult * (CONFIG.invertY ? -1 : 1);
+  state.pitch  = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, state.pitch));
+});
+
+// Schiessen: Mouse-Down + Auto-Fire bei Held-Maus
+let mouseDown = false;
+document.addEventListener('mousedown', e => {
+  if (!state.locked) return;
+  if (e.button === 0) { mouseDown = true; if (state.alive) shoot(); }
+  if (e.button === 2 && state.alive && !state.sliding) setADS(true);
+});
+document.addEventListener('mouseup',  e => {
+  if (e.button === 0) mouseDown = false;
+  if (e.button === 2) setADS(false);
+});
+// Rechtsklick-Kontextmenü unterdrücken (sonst poppt es im Spiel auf)
+document.addEventListener('contextmenu', e => { if (state.locked) e.preventDefault(); });
+
+function setADS(on) {
+  state.ads = on;
+  document.getElementById('ads-overlay').classList.toggle('show', on);
+  document.getElementById('ads-dot').classList.toggle('show', on);
+  document.getElementById('crosshair').classList.toggle('hidden', on);
+}
+
+// ─── PAUSE-MENÜ (Root + Loadouts) ──────────────────────────
+function showPauseRoot() {
+  document.getElementById('pause-root').style.display     = 'flex';
+  document.getElementById('pause-loadouts').style.display = 'none';
+}
+function showPauseLoadouts() {
+  document.getElementById('pause-root').style.display     = 'none';
+  document.getElementById('pause-loadouts').style.display = 'flex';
+  renderPauseClasses();
+}
+
+function renderPauseClasses() {
+  const container = document.getElementById('pause-classes');
+  container.innerHTML = LOADOUTS.map((lo, i) => {
+    const p = findWeapon(lo.primary);
+    const s = findWeapon(lo.secondary);
+    return `<div class="cls-card ${i === CURRENT_CLASS ? 'active' : ''}" onclick="switchClass(${i})">
+      <div class="cls-num">KLASSE ${i + 1}${i === CURRENT_CLASS ? ' · AKTIV' : ''}</div>
+      <div class="cls-pri">${p?.name || '—'}</div>
+      <div class="cls-sec">${s?.name || '—'}</div>
+    </div>`;
+  }).join('');
+}
+
+function switchClass(i) {
+  if (i < 0 || i > 2 || !LOADOUTS[i]) return;
+  CURRENT_CLASS = i;
+  const lo = LOADOUTS[i];
+  LOADOUT.primary   = findWeapon(lo.primary)   || findWeapon('kn44');
+  LOADOUT.secondary = findWeapon(lo.secondary) || findWeapon('mr6');
+  try { localStorage.setItem('nexus.currentClass', String(i)); } catch {}
+  // Komplett neuer Loadout — Munitions-Cache zurücksetzen
+  state.ammoStore = {
+    primary:   { ammo: LOADOUT.primary.ammo,   reserve: LOADOUT.primary.reserve },
+    secondary: { ammo: LOADOUT.secondary.ammo, reserve: LOADOUT.secondary.reserve },
+  };
+  // Aktive Waffe sofort tauschen (passend zum aktuellen Slot)
+  state.currentWeapon = LOADOUT[state.currentSlot];
+  state.ammo          = state.currentWeapon.ammo;
+  state.ammoReserve   = state.currentWeapon.reserve;
+  buildWeaponMesh(state.currentWeapon);
+  updateHUD();
+  renderPauseClasses();
+}
+
+document.getElementById('loadouts-btn').addEventListener('click', showPauseLoadouts);
+document.getElementById('pause-back-btn').addEventListener('click', showPauseRoot);
+// switchClass global für die onclick-Attribute der Klassen-Karten
+window.switchClass = switchClass;
+
+// Pointer Lock
+document.getElementById('play-btn').addEventListener('click', () => canvas.requestPointerLock());
+document.addEventListener('pointerlockchange', () => {
+  state.locked = document.pointerLockElement === canvas;
+  document.getElementById('lock-overlay').classList.toggle('hidden', state.locked);
+  if (!state.locked) {
+    // Beim Pausieren ADS, Auto-Fire & Bewegungstasten zurücksetzen
+    setADS(false);
+    mouseDown = false;
+    state.keys = {};
+  }
+});
+function releaseLock() {
+  document.exitPointerLock();
+  state.locked = false;
+  document.getElementById('lock-overlay').classList.remove('hidden');
+  document.getElementById('lock-sub').textContent = 'KLICKEN UM FORTZUFAHREN';
+  showPauseRoot();  // zur Hauptseite des Pause-Menüs zurück
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SHOOTING
+// ═══════════════════════════════════════════════════════════
+let lastShot = 0;
+function shoot() {
+  const now = performance.now();
+  const w = state.currentWeapon;
+  const cooldown = 60000 / w.rof; // ms zwischen Schüssen (rof = Schuss/min)
+  if (now - lastShot < cooldown) return;
+  if (state.reloading)            return;
+  if (state.switchPhase !== 'idle') return;     // beim Waffenwechsel kein Schuss
+  if (w.ammo > 0 && state.ammo <= 0) { reload(); return; }
+
+  lastShot = now;
+  if (w.ammo > 0) state.ammo--;
+  updateHUD();
+
+  // Mündungsfeuer
+  weaponGroup.children.forEach(m => {
+    if (m.material) { m.material.emissive = new THREE.Color(0xff5500); m.material.emissiveIntensity = 0.5; }
+  });
+  setTimeout(() => weaponGroup.children.forEach(m => { if (m.material) m.material.emissiveIntensity = 0; }), 50);
+
+  // ── Recoil-Pattern (vertikal + horizontal) ──
+  // Reset wenn länger nicht geschossen
+  if (now - state.lastShotTime > 250) state.recoilCount = 0;
+  state.lastShotTime = now;
+  state.recoilCount++;
+
+  const adsMult = 0.45 + (1 - state.adsProgress) * 0.55;  // ADS dämpft Recoil
+  // Vertikaler Kick — wird mit jedem Folgeschuss stärker (capped)
+  const recoilV = w.recoil * 0.012 * Math.min(1.6, 0.7 + state.recoilCount * 0.07) * adsMult;
+  // Horizontaler Kick — abwechselnd links/rechts mit Random-Komponente
+  const sign    = (state.recoilCount % 2 === 0 ? 1 : -1);
+  const recoilH = (w.recoil * 0.0035 * sign + (Math.random() - 0.5) * w.recoil * 0.005) * adsMult;
+  state.pitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, state.pitch + recoilV));
+  state.yaw  += recoilH;
+
+  // ── Bullet-Spread (nur aus der Hüfte, ADS = präzise) ──
+  // NDC-Offset für Raycaster: kleiner Kegel um die Bildmitte
+  const baseSpread  = 0.006 + w.recoil * 0.002;
+  const accumSpread = Math.min(0.025, state.recoilCount * 0.0015);
+  const spread = (1 - state.adsProgress) * (baseSpread + accumSpread);
+  const offX = (Math.random() - 0.5) * spread * 2;
+  const offY = (Math.random() - 0.5) * spread * 2;
+
+  // Raycast (mit Spread)
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(new THREE.Vector2(offX, offY), camera);
+  raycaster.far = w.range;
+
+  // Erst auf Spieler prüfen, dann auf Map
+  const playerMeshes = [];
+  state.remotePlayers.forEach((rp, id) => {
+    if (!rp.group.visible) return;
+    rp.group.traverse(c => { if (c.isMesh) { c.userData.playerId = id; playerMeshes.push(c); } });
+  });
+
+  let hitTargetId = null, hitDistance = 0, hitPoint = null;
+  const playerHits = raycaster.intersectObjects(playerMeshes);
+  const mapHits    = raycaster.intersectObjects(mapMeshes);
+
+  // Welcher Hit ist näher?
+  if (playerHits.length && (!mapHits.length || playerHits[0].distance < mapHits[0].distance)) {
+    hitTargetId = playerHits[0].object.userData.playerId;
+    hitDistance = playerHits[0].distance;
+    hitPoint    = playerHits[0].point;
+    // Hitmarker kommt jetzt vom Server via 'you_hit' (validiert) — kein lokaler Aufruf mehr
+  } else if (mapHits.length) {
+    hitDistance = mapHits[0].distance;
+    hitPoint    = mapHits[0].point;
+    spawnBulletDecal(hitPoint);
+  }
+
+  // Crosshair-Spread (Schuss-Feedback)
+  const ch = document.getElementById('crosshair');
+  ch.classList.add('spread');
+  setTimeout(() => ch.classList.remove('spread'), 80);
+
+  // An Server schicken
+  socket.emit('shoot', {
+    targetId:    hitTargetId,
+    weaponId:    w.id,
+    hitDistance: Math.round(hitDistance * 100) / 100,
+  });
+}
+
+function showHitMarker(killed = false) {
+  const hm = document.getElementById('hitmarker');
+
+  // Animation sauber resetten
+  hm.classList.remove('hit');
+  hm.classList.remove('kill');
+
+  // Force reflow, damit CSS-Animation jedes Mal neu startet
+  void hm.offsetWidth;
+
+  // Kill-Hit = rot
+  if (killed) {
+    hm.classList.add('kill');
+  }
+
+  // Hitmarker triggern
+  hm.classList.add('hit');
+
+  // Entfernen nach Animation
+  setTimeout(() => {
+    hm.classList.remove('hit');
+
+    if (killed) {
+      hm.classList.remove('kill');
+    }
+  }, killed ? 250 : 120);
+}
+
+// +XP-Animation (rechts neben dem Crosshair)
+function showXPGain(amount) {
+  const el = document.getElementById('xp-popup');
+  el.textContent = '+' + amount + ' XP';
+  el.classList.remove('pop');
+  // Force reflow, damit die Animation neu startet, falls sie noch läuft
+  void el.offsetWidth;
+  el.classList.add('pop');
+}
+
+function flashDamage() {
+  const dv = document.getElementById('damage-vignette');
+
+  dv.style.transition = 'none';
+  dv.style.opacity = '0.85';
+
+  requestAnimationFrame(() => {
+    dv.style.transition = 'opacity .28s ease-out';
+    dv.style.opacity = '0';
+  });
+
+  // leichter Aim Punch
+  state.pitch += (Math.random() - 0.5) * 0.02;
+}
+
+function spawnBulletDecal(point) {
+  const decal = new THREE.Mesh(
+    new THREE.SphereGeometry(0.04, 4, 4),
+    new THREE.MeshBasicMaterial({ color: 0x111111 }));
+  decal.position.copy(point);
+  scene.add(decal);
+  setTimeout(() => scene.remove(decal), 8000);
+}
+
+function reload() {
+  const w = state.currentWeapon;
+  if (state.reloading || state.ammoReserve <= 0 || state.ammo === w.ammo) return;
+  state.reloading = true;
+  document.getElementById('weapon-name').textContent = 'NACHLADEN...';
+  setTimeout(() => {
+    const needed = w.ammo - state.ammo;
+    const take = Math.min(needed, state.ammoReserve);
+    state.ammo += take;
+    state.ammoReserve -= take;
+    state.reloading = false;
+    updateHUD();
+  }, 1800);
+}
+
+function switchWeapon(slot) {
+  if (state.currentSlot === slot)   return;
+  if (state.switchPhase !== 'idle') return;  // bereits am Wechseln
+  // Aktuelle Munition merken, bevor wir wechseln
+  state.ammoStore[state.currentSlot] = { ammo: state.ammo, reserve: state.ammoReserve };
+  state.switchTargetSlot = slot;
+  state.switchPhase = 'down';
+  state.switchAnimT = 0;
+  // Reload-Animation/Recoil abbrechen
+  state.reloading   = false;
+  state.recoilCount = 0;
+}
+
+// Wird vom Animations-Update aufgerufen, wenn die Waffe ganz unten ist
+function _completeWeaponSwitch() {
+  state.currentSlot   = state.switchTargetSlot;
+  state.currentWeapon = LOADOUT[state.currentSlot];
+  // Gespeicherte Munition für diesen Slot wiederherstellen — KEIN Auto-Refill
+  const saved = state.ammoStore[state.currentSlot];
+  if (saved) {
+    state.ammo        = saved.ammo;
+    state.ammoReserve = saved.reserve;
+  } else {
+    state.ammo        = state.currentWeapon.ammo;
+    state.ammoReserve = state.currentWeapon.reserve;
+  }
+  buildWeaponMesh(state.currentWeapon);
+  updateHUD();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  KILL FEED
+// ═══════════════════════════════════════════════════════════
+function addKillFeed(killer, victim, color = '#88aaff') {
+  const kf = document.getElementById('killfeed');
+  const el = document.createElement('div');
+  el.className = 'kf-entry';
+  el.innerHTML = `<span style="color:${color}">${killer}</span> ⚔ <span style="color:#ff5500">${victim}</span>`;
+  kf.prepend(el);
+  setTimeout(() => el.remove(), 6000);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DEATH SCREEN
+// ═══════════════════════════════════════════════════════════
+function showDeathScreen() {
+  state.alive = false;
+  const ds = document.getElementById('death-screen');
+  ds.classList.add('show');
+  let countdown = 4;
+  document.getElementById('respawn-count').textContent = countdown;
+  const iv = setInterval(() => {
+    countdown--;
+    document.getElementById('respawn-count').textContent = Math.max(0, countdown);
+    if (countdown <= 0) clearInterval(iv);
+  }, 1000);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MOVEMENT (mit einfacher Map-Kollision)
+// ═══════════════════════════════════════════════════════════
+const clock = new THREE.Clock();
+
+// ─── KOLLISION ─────────────────────────────────────────────
+// Findet die tatsächliche Bodenhöhe unter dem Spieler (für GLTF-Maps mit
+// beliebiger Geometrie). Gibt null zurück, wenn kein Boden vorhanden ist
+// (Spieler ist über dem Abgrund / aus der Map gefallen).
+const _groundRay = new THREE.Raycaster();
+const _DOWN = new THREE.Vector3(0, -1, 0);
+
+function findGroundY(pos) {
+  _groundRay.set(
+    new THREE.Vector3(pos.x, pos.y + 0.5, pos.z),  // knapp über Eye-Höhe nach unten casten
+    _DOWN
+  );
+  _groundRay.far = 60;
+  const hits = _groundRay.intersectObjects(mapMeshes, false);
+  return hits.length > 0 ? hits[0].point.y : null;
+}
+
+// Horizontale Kollision: 4 Richtungen × 2 Höhen (Knie + Brust),
+// damit man weder durch hohe Wände läuft noch unter niedrigen Vorsprüngen durch.
+const _COLL_DIRS = [
+  new THREE.Vector3( 1,0, 0), new THREE.Vector3(-1,0, 0),
+  new THREE.Vector3( 0,0, 1), new THREE.Vector3( 0,0,-1),
+];
+const _collRay = new THREE.Raycaster();
+
+function checkHorizontalCollision(eyePos) {
+  // Füße liegen unter den Augen — abhängig von Pose-Höhe.
+  const feetY = eyePos.y - state.cameraTargetY;
+  const radius = 0.4;
+  // 2 Test-Höhen: knapp über den Füßen (für Mauern) + auf Brusthöhe (für Vorsprünge)
+  for (const h of [0.4, 1.4]) {
+    const checkPos = new THREE.Vector3(eyePos.x, feetY + h, eyePos.z);
+    for (const dir of _COLL_DIRS) {
+      _collRay.set(checkPos, dir);
+      _collRay.far = radius;
+      if (_collRay.intersectObjects(mapMeshes, false).length > 0) return true;
+    }
+  }
+  return false;
+}
+
+// Notbremse: Wenn der Spieler zu weit unter die Map fällt, zurück zum Spawn.
+function respawnAtSpawn() {
+  const cfg = MAP_CONFIG[CURRENT_MAP];
+  const spawns = cfg?.spawnPoints || [[0, 1.7, 0]];
+  const sp = spawns[Math.floor(Math.random() * spawns.length)];
+  camera.position.set(sp[0], sp[1], sp[2]);
+  state.velocity.set(0, 0, 0);
+  state.onGround = false;
+  state.sliding = false;
+  state.crouching = false;
+  state.cameraTargetY = STAND_HEIGHT;
+  state.pose = 'standing';
+}
+
+// ── Crouch / Slide ──────────────────────────────────────────
+const STAND_HEIGHT  = CONFIG.playerHeight;        // 1.7
+const CROUCH_HEIGHT = CONFIG.playerHeight - 0.7;  // 1.0
+const SLIDE_HEIGHT  = CONFIG.playerHeight - 1.0;  // 0.7
+const SLIDE_DURATION = 0.40;   // Sekunden
+const SLIDE_SPEED    = 6.5;    // m/s zu Beginn (nimmt linear auf ~40% ab → ~1.8m Distanz)
+const CROUCH_SPEED_MULT = 0.5;
+
+function handleCrouchSlide() {
+  // Nur einmal pro Tastendruck (e.repeat-Filter passiert im keydown-Handler)
+  const sprinting = !!state.keys['ShiftLeft'];
+  const moving = ['KeyW','KeyA','KeyS','KeyD'].some(k => state.keys[k]);
+
+  if (sprinting && moving && !state.sliding && state.onGround) {
+    // SLIDE starten
+    state.sliding   = true;
+    state.crouching = false;
+    state.slideTime = SLIDE_DURATION;
+    // Slide-Richtung = aktuelle Bewegungsrichtung (zur Zeit des Tastendrucks)
+    const fwd  = new THREE.Vector3(-Math.sin(state.yaw), 0, -Math.cos(state.yaw));
+    const rgt  = new THREE.Vector3( Math.cos(state.yaw), 0, -Math.sin(state.yaw));
+    const dir = new THREE.Vector3();
+    if (state.keys['KeyW']) dir.addScaledVector(fwd,  1);
+    if (state.keys['KeyS']) dir.addScaledVector(fwd, -1);
+    if (state.keys['KeyA']) dir.addScaledVector(rgt, -1);
+    if (state.keys['KeyD']) dir.addScaledVector(rgt,  1);
+    if (dir.length() === 0) dir.copy(fwd);
+    state.slideDir = dir.normalize();
+  } else {
+    // CROUCH togglen
+    state.crouching = !state.crouching;
+    state.sliding   = false;
+  }
+  updatePose();
+}
+
+function updatePose() {
+  const newPose = state.sliding ? 'sliding' : state.crouching ? 'crouching' : 'standing';
+  state.pose = newPose;
+  state.cameraTargetY = state.sliding ? SLIDE_HEIGHT : state.crouching ? CROUCH_HEIGHT : STAND_HEIGHT;
+}
+
+function updateMovement(dt) {
+  if (!state.locked || !state.alive) return;
+
+  // ── Slide-Timer / Slide-Ende ──
+  if (state.sliding) {
+    state.slideTime -= dt;
+    if (state.slideTime <= 0) {
+      state.sliding = false;
+      state.crouching = true;  // bleibt nach Slide in Crouch hängen
+      updatePose();
+    }
+  }
+
+  // ── Speed-Berechnung ──
+  let speed;
+  if (state.sliding) {
+    const t = state.slideTime / SLIDE_DURATION;  // 1 → 0
+    speed = SLIDE_SPEED * (0.4 + 0.6 * t);
+  } else if (state.crouching) {
+    speed = CONFIG.playerSpeed * CROUCH_SPEED_MULT;
+  } else if (state.keys['ShiftLeft']) {
+    speed = CONFIG.playerSpeed * CONFIG.sprintMult;
+  } else {
+    speed = CONFIG.playerSpeed;
+  }
+
+  // ── Ziel-Velocity berechnen ──
+  const targetVel = new THREE.Vector3();
+  if (state.sliding) {
+    targetVel.copy(state.slideDir).multiplyScalar(speed);
+  } else {
+    const forward = new THREE.Vector3(-Math.sin(state.yaw), 0, -Math.cos(state.yaw));
+    const right   = new THREE.Vector3(Math.cos(state.yaw),  0, -Math.sin(state.yaw));
+    if (state.keys['KeyW']) targetVel.addScaledVector(forward,  1);
+    if (state.keys['KeyS']) targetVel.addScaledVector(forward, -1);
+    if (state.keys['KeyA']) targetVel.addScaledVector(right,   -1);
+    if (state.keys['KeyD']) targetVel.addScaledVector(right,    1);
+    if (targetVel.length() > 0) targetVel.normalize().multiplyScalar(speed);
+  }
+
+  // Smoothes Lerping zur Ziel-Velocity (Acceleration/Deceleration)
+  // Slide ist quasi instant, sonst feinfühliger Anlauf/Auslauf.
+  const accel = state.sliding ? 30 : (targetVel.lengthSq() > 0.01 ? 18 : 14);
+  const k = Math.min(1, accel * dt);
+  state.hVelocity.x += (targetVel.x - state.hVelocity.x) * k;
+  state.hVelocity.z += (targetVel.z - state.hVelocity.z) * k;
+
+  // ── Sprung (basiert auf vorherigem onGround) ──
+  if (state.keys['Space'] && state.onGround && !state.sliding) {
+    state.velocity.y = CONFIG.jumpForce;
+    state.onGround = false;
+    if (state.crouching) { state.crouching = false; updatePose(); }
+  }
+
+  // ── Horizontale Bewegung mit Multi-Höhen-Kollision ──
+  const moveX = state.hVelocity.x * dt;
+  const moveZ = state.hVelocity.z * dt;
+  const tryX = camera.position.clone(); tryX.x += moveX;
+  if (!checkHorizontalCollision(tryX)) camera.position.x = tryX.x;
+  else state.hVelocity.x = 0;
+  const tryZ = camera.position.clone(); tryZ.z += moveZ;
+  if (!checkHorizontalCollision(tryZ)) camera.position.z = tryZ.z;
+  else state.hVelocity.z = 0;
+
+  // ── Vertikale Physik mit Ground-Raycast ──
+  const groundY = findGroundY(camera.position);
+
+  if (groundY === null) {
+    // Über Abgrund — pure Schwerkraft, kein Landing-Check
+    state.velocity.y -= CONFIG.gravity * dt;
+    camera.position.y += state.velocity.y * dt;
+    state.onGround = false;
+  } else {
+    const desiredEyeY = groundY + state.cameraTargetY;
+
+    if (!state.onGround) {
+      // Airborne: Schwerkraft, integrieren, Landung prüfen
+      state.velocity.y -= CONFIG.gravity * dt;
+      camera.position.y += state.velocity.y * dt;
+      if (state.velocity.y <= 0 && camera.position.y <= desiredEyeY) {
+        camera.position.y = desiredEyeY;
+        state.velocity.y = 0;
+        state.onGround = true;
+      }
+    } else {
+      // On ground: weiches Tracking der Sollhöhe (Slopes / Crouch-Anim)
+      const drop = camera.position.y - desiredEyeY;
+      if (drop > 0.6) {
+        // Plötzlicher großer Höhenunterschied → über Kante gelaufen, airborne
+        state.onGround = false;
+      } else {
+        camera.position.y += (desiredEyeY - camera.position.y) * Math.min(1, dt * 14);
+      }
+    }
+  }
+
+  // ── Notbremse: zu weit unter Map gefallen → Respawn ──
+  if (camera.position.y < -30) respawnAtSpawn();
+
+  // ── Slide-Tilt (Roll) für Camera-Anim ──
+  const targetTilt = state.sliding ? -0.15 : 0;
+  state.cameraTilt += (targetTilt - state.cameraTilt) * Math.min(1, dt * 8);
+
+  // ── Map-Grenzen ──
+  const b = MAP_CONFIG[CURRENT_MAP]?.bounds;
+  if (b) {
+    camera.position.x = Math.max(b.minX, Math.min(b.maxX, camera.position.x));
+    camera.position.z = Math.max(b.minZ, Math.min(b.maxZ, camera.position.z));
+  }
+
+  camera.rotation.order = 'YXZ';
+  camera.rotation.y = state.yaw;
+  camera.rotation.x = state.pitch;
+  camera.rotation.z = state.cameraTilt + (state.camBobZ || 0);
+
+  // Auto-Fire bei gehaltener Maus (im Slide nicht!)
+  if (mouseDown && state.alive && !state.sliding) shoot();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HUD
+// ═══════════════════════════════════════════════════════════
+function updateHUD() {
+  animateDamage(state.health);
+  document.getElementById('ammo-cur').textContent    = state.ammo;
+  document.getElementById('ammo-res').textContent    = '/ ' + state.ammoReserve;
+  if (!state.reloading)
+    document.getElementById('weapon-name').textContent = state.currentWeapon.name.toUpperCase();
+  document.getElementById('score-a').textContent = state.scores.alpha;
+  document.getElementById('score-b').textContent = state.scores.bravo;
+}
+
+function updateScoreboard() {
+  const tbody = document.getElementById('sb-body');
+  const rows = [];
+  state.remotePlayers.forEach((rp, id) => {
+    rows.push({
+      name: rp.name, team: rp.team,
+      k: rp.kills || 0, d: rp.deaths || 0, xp: rp.xp || 0,
+    });
+  });
+  rows.push({
+    name: PLAYER_NAME + ' (DU)', team: state.myTeam,
+    k: state.myKills || 0, d: state.myDeaths || 0, xp: state.xp || 0,
+  });
+  // Nach XP sortieren (höchster zuerst)
+  rows.sort((a, b) => b.xp - a.xp);
+
+  tbody.innerHTML = rows.map(r =>
+    `<tr>
+      <td>${r.name}</td>
+      <td style="color:${r.team==='alpha'?'#88aaff':r.team==='bravo'?'#ffaa66':'#ddcc66'};text-align:center">${r.team.toUpperCase()}</td>
+      <td style="text-align:center">${r.k}</td>
+      <td style="text-align:center">${r.d}</td>
+      <td style="text-align:center;color:#ff8800">${r.xp}</td>
+    </tr>`
+  ).join('');
+}
+
+// ── Position regelmäßig an Server schicken (~30 Hz) ────────
+setInterval(() => {
+  if (!socket.connected || !state.alive) return;
+  socket.emit('move', {
+    pos:  { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+    rot:  { yaw: state.yaw, pitch: state.pitch },
+    pose: state.pose,
+  });
+}, 33);
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+// ═══════════════════════════════════════════════════════════
+//  WAFFEN- & CAMERA-ANIMATION
+//  (ADS-Move, Sprint-Bob, Waffenwechsel-Anim, FOV-Zoom)
+// ═══════════════════════════════════════════════════════════
+
+// ADS-Zielposition für die Waffe (Offset relativ zur Hipfire-Position).
+// Negative X bringt die Waffe von der rechten Seite zur Bildmitte,
+// positive Y hebt sie auf Augenhöhe, negative Z zieht sie näher.
+const ADS_OFFSET = { x: -0.18, y: 0.08, z: 0.18 };
+
+function updateWeaponAndBob(dt) {
+  // ── ADS-Progress smooth lerpen ──
+  const targetADS = state.ads ? 1 : 0;
+  state.adsProgress += (targetADS - state.adsProgress) * Math.min(1, dt * 12);
+
+  // ── Sprint/Movement-Bob berechnen ──
+  // Wir prüfen die aktuelle Horizontal-Velocity, nicht nur Tasten — funktioniert
+  // damit auch beim Slide-Auslauf, oder wenn man die Wand entlangschrammt.
+  const speedSq = state.hVelocity.x * state.hVelocity.x + state.hVelocity.z * state.hVelocity.z;
+  const moving  = speedSq > 1.5;
+  const sprinting = !!state.keys['ShiftLeft'] && moving && !state.crouching && !state.sliding && state.alive;
+  // Beim Sliden/ADS keinen Bob → wirkt sonst nervös beim Zielen
+  let targetBob = 0;
+  if (state.alive && !state.sliding) {
+    targetBob = sprinting ? 1.0 : (moving ? 0.35 : 0);
+    targetBob *= (1 - state.adsProgress * 0.85);  // ADS dämpft Bob stark
+  }
+  state.bobAmount += (targetBob - state.bobAmount) * Math.min(1, dt * 6);
+  // Time advances faster while sprinting
+  state.bobTime += dt * (sprinting ? 7 : 8);
+
+  // ── Waffenwechsel-Statemachine ──
+  let switchY = 0;
+  if (state.switchPhase !== 'idle') {
+    state.switchAnimT += dt / 0.16;  // 160ms pro Phase (down + up = 320ms total)
+    if (state.switchPhase === 'down') {
+      switchY = -Math.min(1, state.switchAnimT) * 0.7;
+      if (state.switchAnimT >= 1) {
+        _completeWeaponSwitch();
+        state.switchPhase = 'up';
+        state.switchAnimT = 0;
+      }
+    } else if (state.switchPhase === 'up') {
+      switchY = -(1 - Math.min(1, state.switchAnimT)) * 0.7;
+      if (state.switchAnimT >= 1) {
+        state.switchPhase = 'idle';
+        state.switchAnimT = 0;
+        switchY = 0;
+      }
+    }
+  }
+
+  // ── Bob-Offsets für Waffe + Kamera ──
+  // Waffe: deutliches Auf-Ab + leichtes Links-Rechts ("Pendel" während Lauf)
+  const bobYWeapon = Math.abs(Math.sin(state.bobTime * 1.4)) * state.bobAmount * (sprinting ? 0.065 : 0.028);
+  const bobXWeapon = Math.sin(state.bobTime * 0.8) * state.bobAmount * (sprinting ? 0.018 : 0.038);
+  // Kamera: nur ein subtiler Roll-Tilt (Kopf wackelt mit den Schritten)
+  state.camBobZ = Math.sin(state.bobTime) * state.bobAmount * 0.012;
+
+  // ── ADS-Position überlagern ──
+  const adsX = ADS_OFFSET.x * state.adsProgress;
+  const adsY = ADS_OFFSET.y * state.adsProgress;
+  const adsZ = ADS_OFFSET.z * state.adsProgress;
+
+  weaponGroup.rotation.x = sprinting ? -0.18 : 0;
+  weaponGroup.position.set(adsX + bobXWeapon, adsY + bobYWeapon + switchY, adsZ);
+
+  // ── FOV-Animation für ADS-Zoom ──
+  const targetFov = state.ads ? CONFIG.fov * 0.55 : CONFIG.fov;
+  if (Math.abs(state.fovCurrent - targetFov) > 0.01) {
+    state.fovCurrent += (targetFov - state.fovCurrent) * Math.min(1, dt * 14);
+    camera.fov = state.fovCurrent;
+    camera.updateProjectionMatrix();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER LOOP
+// ═══════════════════════════════════════════════════════════
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  updateMovement(dt);
+  updateWeaponAndBob(dt);
+  updateRemotePlayers(dt);
+  renderer.render(scene, camera);
+}
+
+
+//neue health animation bei damage an gegner
+let previousHealth = MAX_HEALTH;
+let damageAnimToken = 0;
+
+function animateDamage(newHealth) {
+  const fill    = document.getElementById('health-fill');
+  const overlay = document.getElementById('health-damage-overlay');
+  const numEl   = document.getElementById('health-num');
+
+  const oldPercent = (previousHealth / MAX_HEALTH) * 100;
+  const newPercent = (Math.max(0, newHealth) / MAX_HEALTH) * 100;
+
+  // Roter Fill schrumpft sofort, Number-Anzeige aktualisieren
+  fill.style.width = newPercent + '%';
+  if (numEl) numEl.textContent = Math.round(Math.max(0, newHealth));
+
+  if (newHealth < previousHealth) {
+    // Token, damit ein Folge-Treffer die laufende Anim "abbricht" / refresht
+    const myToken = ++damageAnimToken;
+
+    // Phase 1: weißer Streifen wird auf alte Höhe gesetzt (kein Transition!)
+    overlay.style.transition = 'none';
+    overlay.style.opacity    = '1';
+    overlay.style.width      = oldPercent + '%';
+
+    // Phase 2: kurz stehen bleiben (Lag), DANN auf neuen Wert schrumpfen + ausfaden
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        if (myToken !== damageAnimToken) return;  // schon übersteuert → abbrechen
+        overlay.style.transition = 'width .35s ease-out, opacity .45s ease-out .1s';
+        overlay.style.width      = newPercent + '%';
+        overlay.style.opacity    = '0';
+      }, 200);  // 200ms Lag-Phase
+    });
+  }
+  previousHealth = newHealth;
+}
+
+animate();
+
+updateHUD();
+</script>
+</body>
+</html>

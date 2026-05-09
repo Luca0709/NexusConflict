@@ -116,7 +116,7 @@ class Room {
       kills:     0,
       deaths:    0,
       xp:        0,
-      pose:      'standing',  // 'standing' | 'crouching' | 'sliding'
+      pose:      'idle',  // 'idle'|'walk'|'sprint'|'crouch_idle'|'crouch_walk'|'slide'|'jump'
       lastHit:   0,
       loadout:   { primary: primaryWeapon.id, secondary: secondaryWeapon.id },
     };
@@ -317,7 +317,10 @@ io.on('connection', (socket) => {
     if (p && p.alive) {
       p.pos = pos;
       p.rot = rot;
-      if (pose === 'standing' || pose === 'crouching' || pose === 'sliding') p.pose = pose;
+      // Whitelist akzeptiert sowohl neue Bewegungs-Posen als auch Legacy-Werte
+      if (typeof pose === 'string' && /^(idle|walk|sprint|crouch_idle|crouch_walk|slide|jump|standing|crouching|sliding)$/.test(pose)) {
+        p.pose = pose;
+      }
     }
   });
 

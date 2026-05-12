@@ -404,8 +404,14 @@ camera.position.set(0, CONFIG.playerHeight, 0);
 state.fovCurrent = CONFIG.fov;
 
 // Licht
-scene.add(new THREE.AmbientLight(0x223344, 0.8));
-const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+// Ambient: hell und leicht warm — wie diffuses Tageslicht
+scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+
+// Hemisphere: Himmelfarbe oben, Bodenfarbe unten — gibt natürlichen Tag-Look
+scene.add(new THREE.HemisphereLight(0xaaccff, 0x665544, 0.6));
+
+// Directional: starke "Sonne"
+const dirLight = new THREE.DirectionalLight(0xfff5e0, 1.4);
 dirLight.position.set(20, 40, 10);
 dirLight.castShadow = true;
 dirLight.shadow.mapSize.width = 2048;

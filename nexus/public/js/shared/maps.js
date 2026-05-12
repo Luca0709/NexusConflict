@@ -65,6 +65,22 @@
       bounds: { minX: -38, maxX: 38, minZ: -38, maxZ: 38 },
       spawnPoints: [[5,5,0],],
     },
+    playground: {
+      id: 'playground',
+      name: 'Playground',
+      modelUrl: 'assets/models/Playground.glb',  // ← NEU
+      skyColor: 0x6FB7FF,
+      bounds: { minX: -38, maxX: 38, minZ: -38, maxZ: 38 },
+      spawnPoints: [[5,5,0],],
+    },
+    city: {
+      id: 'city',
+      name: 'City',
+      modelUrl: 'assets/models/City.glb',  // ← NEU
+      skyColor: 0x6FB7FF,
+      bounds: { minX: -38, maxX: 38, minZ: -38, maxZ: 38 },
+      spawnPoints: [[5,5,0],],
+    },
   };
 
   function getSpawn(mapId) {

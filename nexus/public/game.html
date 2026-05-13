@@ -23,8 +23,23 @@ canvas{display:block}
 #health-track{
   position:relative;
   overflow:hidden;
+  width:200px;
+  height:6px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);
 }
-
+#health-fill{
+  position:absolute;
+  top:0;
+  left:0;
+  height:100%;
+  width:100%;
+  background:linear-gradient(to right,#ff5500,#ff7733);
+  transition:width .14s ease-out, background .35s ease-out;
+}
+#health-fill.low{
+  background:linear-gradient(to right,#cc1100,#ff2200);
+}
 #health-damage-overlay{
   position:absolute;
   top:0;
@@ -54,8 +69,8 @@ canvas{display:block}
   position:fixed;
   left:50%;
   top:50%;
-  width:40px;
-  height:40px;
+  width:48px;
+  height:48px;
   transform:translate(-50%,-50%);
   pointer-events:none;
   opacity:0;
@@ -64,69 +79,60 @@ canvas{display:block}
 
 #hitmarker span{
   position:absolute;
-  width:10px;
+  width:13px;
   height:3px;
-  background:white;
+  background:#fff;
   border-radius:2px;
   opacity:0;
+  box-shadow:0 0 6px rgba(255,255,255,.85),0 0 2px rgba(0,0,0,.95);
 }
 
 /* oben links */
-#hitmarker span:nth-child(1){
-  top:10px;
-  left:6px;
-  transform:rotate(45deg);
-}
-
+#hitmarker span:nth-child(1){top:10px;left:6px;transform:rotate(45deg)}
 /* oben rechts */
-#hitmarker span:nth-child(2){
-  top:10px;
-  right:6px;
-  transform:rotate(-45deg);
-}
-
+#hitmarker span:nth-child(2){top:10px;right:6px;transform:rotate(-45deg)}
 /* unten links */
-#hitmarker span:nth-child(3){
-  bottom:10px;
-  left:6px;
-  transform:rotate(-45deg);
-}
-
+#hitmarker span:nth-child(3){bottom:10px;left:6px;transform:rotate(-45deg)}
 /* unten rechts */
-#hitmarker span:nth-child(4){
-  bottom:10px;
-  right:6px;
-  transform:rotate(45deg);
-}
+#hitmarker span:nth-child(4){bottom:10px;right:6px;transform:rotate(45deg)}
 
-#hitmarker.show{
-  animation:hitmarkerPop .14s ease-out;
-}
+#hitmarker.hit{animation:hitmarkerPop .42s cubic-bezier(.22,1.4,.36,1) forwards}
+#hitmarker.hit span{opacity:1;animation:hitmarkerSpan .42s cubic-bezier(.22,1.4,.36,1) forwards}
 
-#hitmarker.show span{
-  opacity:1;
-}
-
-#hitmarker.kill span{
-  background:red;
-}
+#hitmarker.kill span{background:#ff2200;box-shadow:0 0 10px rgba(255,30,0,.95),0 0 4px rgba(255,255,255,.6)}
+#hitmarker.kill.hit{animation:hitmarkerPopKill .55s cubic-bezier(.22,1.5,.36,1) forwards}
+#hitmarker.kill.hit span{animation:hitmarkerSpan .55s cubic-bezier(.22,1.5,.36,1) forwards}
 
 @keyframes hitmarkerPop{
-  0%{
-    opacity:0;
-    transform:translate(-50%,-50%) scale(.6);
-  }
-  35%{
-    opacity:1;
-    transform:translate(-50%,-50%) scale(1.15);
-  }
-  100%{
-    opacity:0;
-    transform:translate(-50%,-50%) scale(1);
-  }
+  0%   {opacity:0;transform:translate(-50%,-50%) scale(.4)}
+  18%  {opacity:1;transform:translate(-50%,-50%) scale(1.55)}
+  40%  {opacity:1;transform:translate(-50%,-50%) scale(1.0)}
+  100% {opacity:0;transform:translate(-50%,-50%) scale(.95)}
+}
+@keyframes hitmarkerPopKill{
+  0%   {opacity:0;transform:translate(-50%,-50%) scale(.4) rotate(0deg)}
+  20%  {opacity:1;transform:translate(-50%,-50%) scale(1.75) rotate(15deg)}
+  45%  {opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(0deg)}
+  100% {opacity:0;transform:translate(-50%,-50%) scale(1) rotate(0deg)}
+}
+@keyframes hitmarkerSpan{
+  0%   {opacity:0}
+  18%  {opacity:1}
+  85%  {opacity:1}
+  100% {opacity:0}
 }
 #damage-vignette{position:absolute;inset:0;box-shadow:inset 0 0 100px rgba(255,0,0,.6);opacity:0;transition:opacity .3s;pointer-events:none}
 #damage-vignette.hit{opacity:1}
+/* ── Low-HP Bildschirmrand: kommt ab ≤ 50 HP, pulsiert ── */
+#low-hp-vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 50%,transparent 30%,rgba(180,0,0,.55) 100%);opacity:0;transition:opacity .5s}
+#low-hp-vignette.show{animation:lowHpPulse 1.4s ease-in-out infinite}
+@keyframes lowHpPulse{0%,100%{opacity:.55}50%{opacity:.95}}
+#canvas-container.low-hp #gameCanvas{filter:saturate(.55) brightness(.85) contrast(.95)}
+/* ── Damage Direction Indicator (Pfeile wenn man getroffen wird) ── */
+#dmg-direction{position:absolute;top:50%;left:50%;width:340px;height:340px;transform:translate(-50%,-50%);pointer-events:none}
+.dmg-arrow{position:absolute;top:0;left:50%;width:80px;height:90px;transform-origin:50% 170px;margin-left:-40px;opacity:0;transition:opacity .25s}
+.dmg-arrow.show{opacity:1}
+.dmg-arrow svg{width:100%;height:100%}
 #controls-hint{position:absolute;bottom:90px;left:30px;font-size:10px;letter-spacing:2px;color:rgba(255,255,255,.25);line-height:1.8}
 #lock-overlay{position:absolute;inset:0;background:rgba(0,0,0,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;pointer-events:all;cursor:pointer}
 #lock-overlay.hidden{display:none}
@@ -165,9 +171,39 @@ canvas{display:block}
 #ads-dot.show{opacity:1}
 #crosshair.hidden{opacity:0}
 .pl-name{color:#fff;font-size:11px;letter-spacing:1px;background:rgba(0,0,0,.6);padding:2px 6px}
-.pl-health{width:60px;height:4px;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.2);opacity:0;transition:opacity .2s}
+.pl-health{
+  position:relative;
+  width:72px;
+  height:6px;
+  background:rgba(0,0,0,.75);
+  border:1px solid rgba(255,255,255,.25);
+  opacity:0;
+  transition:opacity .2s, box-shadow .15s;
+  overflow:hidden;
+  border-radius:1px;
+}
 .pl-health.show{opacity:1}
-.pl-health-fill{height:100%;background:#ff3322;transition:width .2s}
+/* Glow bei Treffer */
+.pl-health.hit{box-shadow:0 0 12px rgba(255,40,20,.85),0 0 4px rgba(255,255,255,.6)}
+/* Weißer Lag-Bar dahinter — schrumpft mit Delay */
+.pl-health-lag{
+  position:absolute;
+  top:0; left:0;
+  height:100%;
+  width:100%;
+  background:rgba(255,255,255,.95);
+  transition:width .5s cubic-bezier(.4,.2,.4,1) .18s;
+}
+/* Roter Fill davor — schrumpft sofort */
+.pl-health-fill{
+  position:absolute;
+  top:0; left:0;
+  height:100%;
+  width:100%;
+  background:linear-gradient(to right,#cc1100,#ff4422);
+  transition:width .1s ease-out;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25);
+}
 #xp-popup{position:absolute;top:50%;left:50%;transform:translate(20px,-50%);font-size:18px;letter-spacing:3px;color:#ff8800;text-shadow:0 0 6px rgba(0,0,0,.9),0 0 2px #000;opacity:0;pointer-events:none;font-weight:bold}
 #xp-popup.pop{animation:xpPop 1.2s ease-out forwards}
 @keyframes xpPop{
@@ -209,12 +245,18 @@ canvas{display:block}
     <div id="ads-overlay"></div>
     <div id="ads-dot"></div>
     <div id="damage-vignette"></div>
+    <div id="low-hp-vignette"></div>
+    <div id="dmg-direction">
+      <div class="dmg-arrow" id="dmg-arrow">
+        <svg viewBox="0 0 80 90"><path d="M 40 5 L 65 50 L 50 50 L 50 80 L 30 80 L 30 50 L 15 50 Z" fill="rgba(255,40,20,0.85)" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/></svg>
+      </div>
+    </div>
 
     <div id="health-bar">
       <div id="health-label">HEALTH</div>
       <div id="health-track"><div id="health-fill"></div></div>
     </div>
-      <div id="health-num">200</div>
+      <div id="health-num">150</div>
     </div>
 
     <div id="ammo">
@@ -330,8 +372,8 @@ const SETTINGS = (() => {
 
 const CONFIG = {
   playerHeight: 1.7,
-  playerSpeed:  7,
-  sprintMult:   1.35,
+  playerSpeed:  6,
+  sprintMult:   1.3,
   gravity:      25,
   jumpForce:    8,
   mouseSensitivity: (SETTINGS.sensitivity || 50) * 0.00004,
@@ -341,7 +383,7 @@ const CONFIG = {
 };
 
 // ── State ─────────────────────────────────────────────────
-const MAX_HEALTH = 200;
+const MAX_HEALTH = 150;
 const state = {
   health: MAX_HEALTH, ammo: LOADOUT.primary.ammo, ammoReserve: LOADOUT.primary.reserve,
   currentWeapon: LOADOUT.primary, currentSlot: 'primary',
@@ -364,6 +406,15 @@ const state = {
   cameraTilt: 0,          // Roll-Tilt für Slide-Anim
   ads: false,             // Aim Down Sights aktiv?
   fovCurrent: 0,          // wird im Setup gesetzt
+  // ── Hit-Feedback (Camera-Shake + Direction) ──
+  shakeTime: 0,           // verbleibende Shake-Dauer in s
+  shakeAmount: 0,         // initiale Intensität
+  shakeOffsetX: 0,        // aktueller Frame-Offset (wird vor Render auf yaw addiert)
+  shakeOffsetY: 0,
+  isLowHp: false,
+  // ── Jump-Fatigue ──
+  jumpStamina: 1.0,       // 0 (erschöpft) bis 1 (frisch)
+  lastJumpTime: 0,        // performance.now() ms
   // ─ Recoil ─
   recoilCount: 0,
   lastShotTime: 0,
@@ -404,21 +455,36 @@ camera.position.set(0, CONFIG.playerHeight, 0);
 state.fovCurrent = CONFIG.fov;
 
 // Licht
-// Ambient: hell und leicht warm — wie diffuses Tageslicht
-scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+//
+// Ausgewogenes Tageslicht
+//
 
-// Hemisphere: Himmelfarbe oben, Bodenfarbe unten — gibt natürlichen Tag-Look
-scene.add(new THREE.HemisphereLight(0xaaccff, 0x665544, 0.6));
+// Grundhelligkeit etwas reduziert
+const ambient = new THREE.AmbientLight(0xffffff, 1.2);
+scene.add(ambient);
 
-// Directional: starke "Sonne"
-const dirLight = new THREE.DirectionalLight(0xfff5e0, 1.4);
-dirLight.position.set(20, 40, 10);
-dirLight.castShadow = true;
-dirLight.shadow.mapSize.width = 2048;
-dirLight.shadow.mapSize.height = 2048;
-dirLight.shadow.camera.left = -60; dirLight.shadow.camera.right = 60;
-dirLight.shadow.camera.top  = 60;  dirLight.shadow.camera.bottom = -60;
-scene.add(dirLight);
+// Natürliches Himmelslicht
+const hemi = new THREE.HemisphereLight(0x9fd4ff, 0xf0e6d8, 0.7);
+scene.add(hemi);
+
+// Sonne weniger aggressiv
+const sun = new THREE.DirectionalLight(0xffffff, 1.8);
+sun.position.set(30, 50, 20);
+
+sun.castShadow = true;
+
+sun.shadow.mapSize.width = 2048;
+sun.shadow.mapSize.height = 2048;
+
+sun.shadow.camera.left = -80;
+sun.shadow.camera.right = 80;
+sun.shadow.camera.top = 80;
+sun.shadow.camera.bottom = -80;
+
+scene.add(sun);
+
+// Weniger Exposure gegen überstrahlte Texturen
+renderer.toneMappingExposure = 1.1;
 
 // ── Waffe in der View ─────────────────────────────────────
 const weaponGroup = new THREE.Group();
@@ -564,7 +630,7 @@ function loadMap(mapId) {
 const PLAYER_MODEL_URL      = 'assets/models/player.glb';
 const PLAYER_MODEL_SCALE    = 1.0;        // ggf. 0.5 wenn doppelt zu groß, 2.0 wenn halb so groß
 const PLAYER_MODEL_Y_OFFSET = 0;          // wenn der Pivot nicht an den Füßen ist
-const PLAYER_MODEL_Y_ROT    = Math.PI;          // wenn das Modell in falsche Richtung schaut
+const PLAYER_MODEL_Y_ROT    = 0;          // wenn das Modell in falsche Richtung schaut
 
 // ─── Pose → Animations-Name Mapping ───
 const POSE_TO_ANIM = {
@@ -724,7 +790,10 @@ function createRemotePlayer(id, data) {
   label.className = 'player-label';
   label.innerHTML =
     `<div class="pl-name" style="color:${data.team === 'alpha' ? '#88aaff' : '#ffaa66'}">${data.name}</div>
-     <div class="pl-health"><div class="pl-health-fill" style="width:100%"></div></div>`;
+     <div class="pl-health">
+       <div class="pl-health-lag"></div>
+       <div class="pl-health-fill"></div>
+     </div>`;
   document.getElementById('canvas-container').appendChild(label);
 
   state.remotePlayers.set(id, {
@@ -732,9 +801,10 @@ function createRemotePlayer(id, data) {
     nameEl:       label.querySelector('.pl-name'),
     healthEl:     label.querySelector('.pl-health'),
     healthFillEl: label.querySelector('.pl-health-fill'),
+    healthLagEl:  label.querySelector('.pl-health-lag'),
     name: data.name, team: data.team,
     target: { pos: new THREE.Vector3(), yaw: 0 },
-    health: 100,
+    health: MAX_HEALTH,
     lastHit: 0,        // wann zuletzt von uns getroffen (für Healthbar-Anzeige)
     pose: 'idle',
     visible: true,     // Sichtlinie + Distanz-Check
@@ -965,12 +1035,41 @@ socket.on('player_killed', ({ killerName, victimName, weapon, scores, killerId, 
   if (victimId === state.myId) showDeathScreen();
 });
 
-socket.on('take_damage', ({ health }) => {
+socket.on('take_damage', ({ health, fromId }) => {
   state.health = health;
-  
+
   updateHUD();
   flashDamage();
+  triggerHitFeedback(fromId);   // Camera-Shake + Richtungs-Pfeil
 });
+
+// Zeigt für 600 ms einen Pfeil aus Richtung des Schützen und löst Camera-Shake aus.
+function triggerHitFeedback(fromId) {
+  // Camera-Shake (immer, auch wenn fromId unbekannt)
+  state.shakeTime   = 0.28;
+  state.shakeAmount = 0.045;
+
+  if (!fromId) return;
+  const rp = state.remotePlayers.get(fromId);
+  if (!rp) return;
+
+  // Winkel vom Spieler zum Schützen (in XZ-Ebene)
+  const dx = rp.group.position.x - camera.position.x;
+  const dz = rp.group.position.z - camera.position.z;
+  const angleToShooter = Math.atan2(dx, dz);
+
+  // Relativ zur eigenen Blickrichtung. CSS rotate: 0 = oben (vor uns), 90 = rechts.
+  let rel = angleToShooter - state.yaw;
+  while (rel > Math.PI)  rel -= 2 * Math.PI;
+  while (rel < -Math.PI) rel += 2 * Math.PI;
+  const deg = -(rel * 180 / Math.PI);
+
+  const arrow = document.getElementById('dmg-arrow');
+  arrow.style.transform = `rotate(${deg}deg)`;
+  arrow.classList.add('show');
+  clearTimeout(state._dmgArrowTimer);
+  state._dmgArrowTimer = setTimeout(() => arrow.classList.remove('show'), 650);
+}
 
 socket.on('respawn', ({ pos }) => {
   state.health = MAX_HEALTH;
@@ -986,6 +1085,14 @@ socket.on('respawn', ({ pos }) => {
   state.ammo        = state.currentWeapon.ammo;
   state.ammoReserve = state.currentWeapon.reserve;
   state.recoilCount = 0;
+  // Hit-Feedback zurücksetzen
+  previousHealth = MAX_HEALTH;
+  state.isLowHp = false;
+  state.shakeTime = 0;
+  state.jumpStamina = 1.0;
+  document.getElementById('low-hp-vignette').classList.remove('show');
+  document.getElementById('canvas-container').classList.remove('low-hp');
+  document.getElementById('dmg-arrow').classList.remove('show');
   updateHUD();
 });
 
@@ -1244,7 +1351,7 @@ function showHitMarker(killed = false) {
     if (killed) {
       hm.classList.remove('kill');
     }
-  }, killed ? 250 : 120);
+  }, killed ? 560 : 430);
 }
 
 // +XP-Animation (rechts neben dem Crosshair)
@@ -1418,7 +1525,7 @@ function respawnAtSpawn() {
 const STAND_HEIGHT  = CONFIG.playerHeight;        // 1.7
 const CROUCH_HEIGHT = CONFIG.playerHeight - 0.7;  // 1.0
 const SLIDE_HEIGHT  = CONFIG.playerHeight - 1.0;  // 0.7
-const SLIDE_DURATION = 0.40;   // Sekunden
+const SLIDE_DURATION = 0.60;   // Sekunden (länger als zuvor)
 const SLIDE_SPEED    = 6.5;    // m/s zu Beginn (nimmt linear auf ~40% ab → ~1.8m Distanz)
 const CROUCH_SPEED_MULT = 0.5;
 
@@ -1519,11 +1626,28 @@ function updateMovement(dt) {
   state.hVelocity.x += (targetVel.x - state.hVelocity.x) * k;
   state.hVelocity.z += (targetVel.z - state.hVelocity.z) * k;
 
-  // ── Sprung (basiert auf vorherigem onGround) ──
-  if (state.keys['Space'] && state.onGround && !state.sliding) {
-    state.velocity.y = CONFIG.jumpForce;
-    state.onGround = false;
+  // ── Sprung mit Stamina-System ──
+  // Jump kostet 0.45 Stamina, ab < 0.25 Stamina komplett blockiert.
+  // Force skaliert mit Stamina (50% bis 100% der jumpForce).
+  // Recovery: nach 0.8s ohne Sprung, voll regeneriert in ~2.7s.
+  const JUMP_COST = 0.35;
+  const JUMP_THRESHOLD = 0.15;
+  const JUMP_RECOVER_DELAY = 0.5;   // s ohne Sprung bis Recovery
+  const JUMP_RECOVER_RATE  = 0.4;  // Stamina pro Sekunde
+
+  if (state.keys['Space'] && state.onGround && !state.sliding && state.jumpStamina >= JUMP_THRESHOLD) {
+    const force = CONFIG.jumpForce * (0.5 + 0.5 * state.jumpStamina);
+    state.velocity.y    = force;
+    state.onGround      = false;
+    state.jumpStamina   = Math.max(0, state.jumpStamina - JUMP_COST);
+    state.lastJumpTime  = performance.now();
     if (state.crouching) { state.crouching = false; updatePose(); }
+  }
+
+  // Stamina-Recovery wenn länger nicht gesprungen wurde
+  const sinceJump = (performance.now() - state.lastJumpTime) / 1000;
+  if (sinceJump > JUMP_RECOVER_DELAY && state.jumpStamina < 1) {
+    state.jumpStamina = Math.min(1, state.jumpStamina + JUMP_RECOVER_RATE * dt);
   }
 
   // ── Horizontale Bewegung mit Multi-Höhen-Kollision ──
@@ -1582,9 +1706,19 @@ function updateMovement(dt) {
     camera.position.z = Math.max(b.minZ, Math.min(b.maxZ, camera.position.z));
   }
 
+  // Camera-Shake-Offset für diesen Frame berechnen (decay)
+  if (state.shakeTime > 0) {
+    state.shakeTime -= dt;
+    const decay = Math.max(0, state.shakeTime / 0.28); // 1 → 0
+    state.shakeOffsetX = (Math.random() - 0.5) * state.shakeAmount * decay;
+    state.shakeOffsetY = (Math.random() - 0.5) * state.shakeAmount * decay;
+  } else {
+    state.shakeOffsetX = 0; state.shakeOffsetY = 0;
+  }
+
   camera.rotation.order = 'YXZ';
-  camera.rotation.y = state.yaw;
-  camera.rotation.x = state.pitch;
+  camera.rotation.y = state.yaw   + state.shakeOffsetX;
+  camera.rotation.x = state.pitch + state.shakeOffsetY;
   camera.rotation.z = state.cameraTilt + (state.camBobZ || 0);
 
   // Feinen Pose-State berechnen (für Sync + Remote-Animationen)
@@ -1739,30 +1873,53 @@ function animate() {
 }
 
 
-//neue health animation bei damage an gegner
+// HUD-Healthbar mit Lag-Bar + Low-HP Warnung
 let previousHealth = MAX_HEALTH;
+let damageAnimToken = 0;
 
 function animateDamage(newHealth) {
-  const fill = document.getElementById('health-fill');
+  const fill    = document.getElementById('health-fill');
   const overlay = document.getElementById('health-damage-overlay');
+  const numEl   = document.getElementById('health-num');
+  if (!fill || !overlay) return;
 
   const oldPercent = (previousHealth / MAX_HEALTH) * 100;
-  const newPercent = (newHealth / MAX_HEALTH) * 100;
+  const newPercent = (Math.max(0, newHealth) / MAX_HEALTH) * 100;
 
+  // Roter Fill schrumpft fast sofort (CSS transition .14s)
   fill.style.width = newPercent + '%';
+  // Ab 50% farblich anders + pulsiert (siehe CSS .low)
+  fill.classList.toggle('low', newHealth <= 50);
+  // Health-Zahl aktualisieren
+  if (numEl) numEl.textContent = Math.max(0, Math.round(newHealth));
 
-  if (newHealth < previousHealth) {
-    overlay.style.transition = 'none';
-    overlay.style.opacity = '0.9';
-    overlay.style.width = oldPercent + '%';
-
-    requestAnimationFrame(() => {
-      overlay.style.transition = 'width .45s ease-out, opacity .45s ease-out';
-      overlay.style.width = newPercent + '%';
-      overlay.style.opacity = '0';
-    });
+  // Low-HP Bildschirmrand + Sicht-Filter ab ≤ 50 HP
+  const lowHp = newHealth > 0 && newHealth <= 50;
+  if (lowHp !== state.isLowHp) {
+    state.isLowHp = lowHp;
+    document.getElementById('low-hp-vignette').classList.toggle('show', lowHp);
+    document.getElementById('canvas-container').classList.toggle('low-hp', lowHp);
   }
 
+  if (newHealth < previousHealth) {
+    // Token, damit Folge-Treffer die vorige Animation cancelt
+    const myToken = ++damageAnimToken;
+
+    // Weißen Streifen sofort auf alte Höhe (ohne Transition)
+    overlay.style.transition = 'none';
+    overlay.style.opacity    = '1';
+    overlay.style.width      = oldPercent + '%';
+
+    // Phase 2: kurz stehenbleiben, dann auf neuen Wert fallen + faden
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        if (myToken !== damageAnimToken) return;
+        overlay.style.transition = 'width .4s ease-out, opacity .5s ease-out .1s';
+        overlay.style.width      = newPercent + '%';
+        overlay.style.opacity    = '0';
+      }, 220);
+    });
+  }
   previousHealth = newHealth;
 }
 

@@ -35,6 +35,7 @@
         rotation: { x: 0, y: Math.PI/2, z: 0 },     // ggf. drehen     MATH.PI für 180 Grad drehung, Derweil NUR bei Y ändern, dass Waffe geradeaus zeigt.
         dmg:42, rof:510, ammo:24, reserve:72,  range:72, recoil:1.6, desc:'Burst-Sturmgewehr mit hoher Reichweite und moderaten Schaden. Stark auf mittlerer Distanz.',
       },
+      
     ],
     smg: [
       { id:'vesper',    name:'Vesper',    dmg:24, rof:900, ammo:25, reserve:100, range:30, recoil:0.6, color:0x557788, desc:'Schnellste SMG' },
